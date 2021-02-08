@@ -36,4 +36,5 @@ And I've added the [Live Server](https://marketplace.visualstudio.com/items?item
 (You can't run JavaScript modules or threads without a web server.)
 
 ## Whenever I get to the GUI it might look something like this.
-![GUI](https://cf.geekdo-images.com/fqO5m6XXoQheQ6jaOdcpCQ__opengraph/img/NYIDA1lyP7vGPA_kyJa81R0f6JY=/fit-in/1200x630/filters:strip_icc()/pic5851096.jpg)
+
+![GUI](<https://cf.geekdo-images.com/fqO5m6XXoQheQ6jaOdcpCQ__opengraph/img/NYIDA1lyP7vGPA_kyJa81R0f6JY=/fit-in/1200x630/filters:strip_icc()/pic5851096.jpg>)

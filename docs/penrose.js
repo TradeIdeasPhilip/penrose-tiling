@@ -64,7 +64,9 @@ var Segment = (function () {
     return Segment;
 }());
 export { Segment };
-function fromInteriorAngle(degrees) { return (180 - degrees) / 180 * Math.PI; }
+function fromInteriorAngle(degrees) {
+    return ((180 - degrees) / 180) * Math.PI;
+}
 var a36 = fromInteriorAngle(36);
 var a72 = fromInteriorAngle(72);
 var a144 = fromInteriorAngle(144);
@@ -83,7 +85,7 @@ var Shape = (function () {
     Shape.kiteInfo = function (previous) {
         var fromDot = !previous.fromDot;
         var long = previous.fromDot ? !previous.long : previous.long;
-        var angle = (fromDot && !long) ? a144 : a72;
+        var angle = fromDot && !long ? a144 : a72;
         return { fromDot: fromDot, long: long, angle: angle };
     };
     Shape.createKite = function (segment) {
@@ -92,7 +94,7 @@ var Shape = (function () {
     Shape.dartInfo = function (previous) {
         var fromDot = !previous.fromDot;
         var long = previous.fromDot ? previous.long : !previous.long;
-        var angle = fromDot ? a36 : (long ? a72 : a216);
+        var angle = fromDot ? a36 : long ? a72 : a216;
         return { fromDot: fromDot, long: long, angle: angle };
     };
     Shape.createDart = function (segment) {

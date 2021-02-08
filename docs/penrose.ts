@@ -29,8 +29,7 @@ export class Segment {
     public readonly to: Point,
     public readonly fromDot: boolean,
     public readonly long: boolean
-  ) {
-  }
+  ) {}
 
   /**
    * The dot is closest to `to`.
@@ -94,7 +93,9 @@ type ShapeInfo = (previous: {
  * @param degrees The size of the interior angle.
  * @returns The number of radians to add to the previous angle to get the next angle.
  */
-function fromInteriorAngle(degrees : number) { return (180 - degrees) / 180 * Math.PI;}
+function fromInteriorAngle(degrees: number) {
+  return ((180 - degrees) / 180) * Math.PI;
+}
 
 /** Interior angle of 36° */
 const a36 = fromInteriorAngle(36);
@@ -116,7 +117,12 @@ export class Shape {
     while (segments.length < 4) {
       const previous = segments[segments.length - 1];
       const nextInfo = shapeInfo(previous);
-      const next = Segment.create(previous.to, nextInfo.fromDot, nextInfo.long, previous.angle + nextInfo.angle);
+      const next = Segment.create(
+        previous.to,
+        nextInfo.fromDot,
+        nextInfo.long,
+        previous.angle + nextInfo.angle
+      );
       segments.push(next);
     }
     this.segments = segments;
@@ -127,7 +133,7 @@ export class Shape {
   ): ReturnType<ShapeInfo> {
     const fromDot = !previous.fromDot;
     const long = previous.fromDot ? !previous.long : previous.long;
-    const angle = (fromDot && !long)?a144:a72;
+    const angle = fromDot && !long ? a144 : a72;
     return { fromDot, long, angle };
   }
 
@@ -140,7 +146,7 @@ export class Shape {
   ): ReturnType<ShapeInfo> {
     const fromDot = !previous.fromDot;
     const long = previous.fromDot ? previous.long : !previous.long;
-    const angle = fromDot?a36:(long?a72:a216);
+    const angle = fromDot ? a36 : long ? a72 : a216;
     return { fromDot, long, angle };
   }
 
