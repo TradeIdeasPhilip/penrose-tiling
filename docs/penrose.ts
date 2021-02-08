@@ -2,7 +2,7 @@ const φ = (1 + Math.sqrt(5)) / 2;
 const longLength = 17;
 const shortLength = longLength / φ;
 
-class Point {
+export class Point {
   private constructor(public readonly x: number, public readonly y: number) {}
 
   static find(x: number, y: number) {
@@ -11,9 +11,11 @@ class Point {
     // close enough.
     return new Point(x, y);
   }
+
+  static readonly ORIGIN = Point.find(0, 0);
 }
 
-class Segment {
+export class Segment {
   /**
    * `to` and `from` assume that we are moving around the shape counter-clockwise,
    * i.e. the mathematically positive direction.
@@ -28,7 +30,6 @@ class Segment {
     public readonly fromDot: boolean,
     public readonly long: boolean
   ) {
-    console.log(from, to);
   }
 
   /**
@@ -53,59 +54,100 @@ class Segment {
     return new Segment(this.to, this.from, this.toDot, this.long);
   }
 
-  get key() {
-    if (this.fromDot) {
-      return this.long ? "fromDotLong" : "fromDotShort";
-    } else {
-      return this.long ? "toDotLong" : "toDotShort";
+  get angle() {
+    // Warning:  y for the canvas is positive down.  Everywhere else we've been
+    // using the convention that y is positive up.
+    return Math.atan2(this.to.y - this.from.y, this.to.x - this.from.x);
+  }
+
+  static create(
+    from: Point = Point.ORIGIN,
+    fromDot?: boolean,
+    long?: boolean,
+    initialAngle?: number
+  ) {
+    if (fromDot === undefined) {
+      fromDot = Math.random() < 0.5;
     }
+    if (long === undefined) {
+      long = Math.random() < 0.5;
+    }
+    if (initialAngle === undefined) {
+      initialAngle = Math.random() * Math.PI * 2;
+    }
+    const length = long ? longLength : shortLength;
+    const Δx = Math.cos(initialAngle) * length;
+    const Δy = Math.sin(initialAngle) * length;
+    const to = Point.find(from.x + Δx, from.y + Δy);
+    return new this(from, to, fromDot, long);
   }
 }
 
-type Segments = {
-  fromDotLong: Segment & { fromDot: true; long: true };
-  toDotLong: Segment & { fromDot: false; long: true };
-  fromDotShort: Segment & { fromDot: true; long: false };
-  toDotShort: Segment & { fromDot: true; long: false };
-};
+type ShapeInfo = (previous: {
+  fromDot: boolean;
+  long: boolean;
+}) => { fromDot: boolean; long: boolean; angle: number };
 
-type ShapeInfo = Record<
-  keyof Segments,
-  { next: keyof Segments; nextAngle: number }
->;
+/**
+ * Convert from the format used on Wikipedia and what we need.
+ * ![Wikipedia](https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Kite_Dart.svg/450px-Kite_Dart.svg.png)
+ * @param degrees The size of the interior angle.
+ * @returns The number of radians to add to the previous angle to get the next angle.
+ */
+function fromInteriorAngle(degrees : number) { return (180 - degrees) / 180 * Math.PI;}
+
+/** Interior angle of 36° */
+const a36 = fromInteriorAngle(36);
+
+/** Interior angle of 72° */
+const a72 = fromInteriorAngle(72);
+
+/** Interior angle of 144° */
+const a144 = fromInteriorAngle(144);
+
+/** Interior angle of 216° */
+const a216 = fromInteriorAngle(216);
 
 export class Shape {
-  public readonly segments: Segments;
+  public readonly segments: readonly Segment[];
 
-  private constructor(firstSegment: Segment, shapeInfo : ShapeInfo) {
-    const segments = {} as Segments;
-    const initialKey = firstSegment.key;
-    //segments[initialKey] = firstSegment;
+  private constructor(firstSegment: Segment, shapeInfo: ShapeInfo) {
+    const segments = [firstSegment];
+    while (segments.length < 4) {
+      const previous = segments[segments.length - 1];
+      const nextInfo = shapeInfo(previous);
+      const next = Segment.create(previous.to, nextInfo.fromDot, nextInfo.long, previous.angle + nextInfo.angle);
+      segments.push(next);
+    }
     this.segments = segments;
   }
 
-  private static readonly kiteInfo: ShapeInfo = {
-    // TODO fill in the actual angles!
-    fromDotShort: { next: "toDotLong", nextAngle: 0 },
-    toDotLong: { next: "fromDotLong", nextAngle: 0 },
-    fromDotLong: { next: "toDotShort", nextAngle: 0 },
-    toDotShort: { next: "fromDotShort", nextAngle: 0 },
-  };
+  private static kiteInfo(
+    previous: Parameters<ShapeInfo>[0]
+  ): ReturnType<ShapeInfo> {
+    const fromDot = !previous.fromDot;
+    const long = previous.fromDot ? !previous.long : previous.long;
+    const angle = (fromDot && !long)?a144:a72;
+    return { fromDot, long, angle };
+  }
 
   static createKite(segment: Segment): Shape {
     return new this(segment, this.kiteInfo);
   }
 
-  private static readonly dartInfo: ShapeInfo = {
-    // TODO fill in the actual angles!
-    fromDotShort: { next: "toDotShort", nextAngle: 0 },
-    toDotShort: { next: "fromDotLong", nextAngle: 0 },
-    fromDotLong: { next: "toDotLong", nextAngle: 0 },
-    toDotLong: { next: "fromDotShort", nextAngle: 0 },
-  };
+  private static dartInfo(
+    previous: Parameters<ShapeInfo>[0]
+  ): ReturnType<ShapeInfo> {
+    const fromDot = !previous.fromDot;
+    const long = previous.fromDot ? previous.long : !previous.long;
+    const angle = fromDot?a36:(long?a72:a216);
+    return { fromDot, long, angle };
+  }
 
   static createDart(segment: Segment): Shape {
     return new this(segment, this.dartInfo);
   }
-
 }
+
+// For the JavaScript console.
+(window as any).Penrose = { Point, Segment, Shape };
