@@ -6,6 +6,7 @@ var range = getById("range", HTMLInputElement);
 var canvasAdapter = new CanvasAdapter("canvas");
 canvasAdapter.setActualPixelSize();
 var context = canvasAdapter.context;
+var available = [];
 function add(type) {
     var dart = type == "dart";
     var shape = Shape[dart ? "createDart" : "createKite"](Segment.create());
@@ -15,6 +16,7 @@ function add(type) {
     context.strokeStyle = "black";
     context.lineWidth = 3;
     context.stroke();
+    available.push.apply(available, shape.segments);
 }
 addKiteButton.addEventListener("click", function () {
     add("kite");

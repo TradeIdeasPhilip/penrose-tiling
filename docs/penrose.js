@@ -65,6 +65,15 @@ var Point = (function () {
     return Point;
 }());
 export { Point };
+var IntelliSenseTest = (function () {
+    function IntelliSenseTest(from, to, fromDot, long) {
+        this.from = from;
+        this.to = to;
+        this.fromDot = fromDot;
+        this.long = long;
+    }
+    return IntelliSenseTest;
+}());
 var Segment = (function () {
     function Segment(from, to, fromDot, long) {
         this.from = from;

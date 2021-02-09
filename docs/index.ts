@@ -10,6 +10,7 @@ const canvasAdapter = new CanvasAdapter("canvas");
 canvasAdapter.setActualPixelSize();
 const context = canvasAdapter.context;
 
+const available : Segment[] = [];
 
 function add(type : "kite" | "dart") {
   const dart = type == "dart";
@@ -20,6 +21,9 @@ function add(type : "kite" | "dart") {
   context.strokeStyle = "black";
   context.lineWidth = 3;
   context.stroke();
+  // The first time we just add all four segments.  
+  // Later we have to remove used ones, TODO.
+  available.push(...shape.segments);
 }
 
 addKiteButton.addEventListener("click", () => {

@@ -66,10 +66,17 @@ export class Point {
   static readonly ORIGIN = Point.find(0, 0);
 }
 
-export class Segment {
+/**
+ * This class is a test of embedded images in VS Code.
+ * IntelliSense will show images that start with https:// just fine.
+ * IntelliSense will **not** show the image if it is a local file.
+ * In the preview of a *.md file, VS code can handle local images just fine.
+ */
+class IntelliSenseTest {
   /**
    * `to` and `from` assume that we are moving around the shape counter-clockwise,
    * i.e. the mathematically positive direction.
+   * ![explanation of dots](./kite-dart-dots.png)
    * @param from Go counter-clockwise to find `to`.
    * @param to Go clockwise to find `from`.
    * @param fromDot The dot is closest to `from`.
@@ -81,7 +88,25 @@ export class Segment {
     public readonly fromDot: boolean,
     public readonly long: boolean
   ) {}
+}
 
+  export class Segment {
+    /**
+     * `to` and `from` assume that we are moving around the shape counter-clockwise,
+     * i.e. the mathematically positive direction.
+     * ![explanation of dots](https://raw.githubusercontent.com/TradeIdeasPhilip/penrose-tiling/master/docs/kite-dart-dots.png)
+     * @param from Go counter-clockwise to find `to`.
+     * @param to Go clockwise to find `from`.
+     * @param fromDot The dot is closest to `from`.
+     * @param long This segment is longer than some but equal to others.
+     */
+    constructor(
+      public readonly from: Point,
+      public readonly to: Point,
+      public readonly fromDot: boolean,
+      public readonly long: boolean
+    ) {}
+  
   /**
    * The dot is closest to `to`.
    */
