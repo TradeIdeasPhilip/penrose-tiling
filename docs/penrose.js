@@ -1,6 +1,58 @@
+import { getById } from "./library/typescript/client/client-misc.js";
 var φ = (1 + Math.sqrt(5)) / 2;
-var longLength = 17;
+var longLength = 60;
 var shortLength = longLength / φ;
+var CanvasAdapter = (function () {
+    function CanvasAdapter(canvas) {
+        this.xOffset = 0;
+        this.yOffset = 0;
+        this.scale = 1;
+        if (canvas instanceof HTMLCanvasElement) {
+            this.canvas = canvas;
+        }
+        else {
+            this.canvas = getById(canvas, HTMLCanvasElement);
+        }
+        this.context = this.canvas.getContext("2d");
+        this.recenter();
+    }
+    CanvasAdapter.prototype.recenter = function () {
+        this.xOffset = this.canvas.width / 2;
+        this.yOffset = this.canvas.height / 2;
+    };
+    CanvasAdapter.prototype.intoCanvasSpace = function (point) {
+        return { x: point.x * this.scale + this.xOffset, y: this.yOffset - point.y * this.scale };
+    };
+    CanvasAdapter.prototype.moveTo = function (point) {
+        var _a = this.intoCanvasSpace(point), x = _a.x, y = _a.y;
+        this.context.moveTo(x, y);
+    };
+    CanvasAdapter.prototype.lineTo = function (point) {
+        var _a = this.intoCanvasSpace(point), x = _a.x, y = _a.y;
+        this.context.lineTo(x, y);
+    };
+    CanvasAdapter.prototype.makeClosedPolygon = function (points) {
+        var _this = this;
+        this.context.beginPath();
+        points.forEach(function (point, index) {
+            if (index == 0) {
+                _this.moveTo(point);
+            }
+            else {
+                _this.lineTo(point);
+            }
+        });
+        this.context.closePath();
+    };
+    CanvasAdapter.prototype.setActualPixelSize = function () {
+        var canvas = this.canvas;
+        var style = canvas.style;
+        style.width = (canvas.width / devicePixelRatio + "px");
+        style.height = (canvas.height / devicePixelRatio + "px");
+    };
+    return CanvasAdapter;
+}());
+export { CanvasAdapter };
 var Point = (function () {
     function Point(x, y) {
         this.x = x;
@@ -82,6 +134,13 @@ var Shape = (function () {
         }
         this.segments = segments;
     }
+    Object.defineProperty(Shape.prototype, "points", {
+        get: function () {
+            return this.segments.map(function (segment) { return segment.from; });
+        },
+        enumerable: false,
+        configurable: true
+    });
     Shape.kiteInfo = function (previous) {
         var fromDot = !previous.fromDot;
         var long = previous.fromDot ? !previous.long : previous.long;

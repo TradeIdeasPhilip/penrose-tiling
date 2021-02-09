@@ -2,13 +2,20 @@
 <html>
   <head>
     <title>Penrose Tiling</title>
+    <link rel="stylesheet" href="index.css">
   </head>
   <body>
-    <i style="text-decoration: line-through solid">loading...</i>
     <div>
-      Nothing in the GUI yet.&nbsp; Check out the <code>Penrose</code> namespace
-      in the console.
+      <a href="https://github.com/TradeIdeasPhilip/penrose-tiling">About</a> (github)
+    </div>
+    <div class="main">
+      <canvas id="canvas" width="500" height="500"></canvas>
+      <input type="range" id="range">
+      <div>
+        <button id="addKiteButton">Add Kite</button>
+        <button id="addDartButton">Add Dart</button>
+      </div>
     </div>
   </body>
-  <script type="module" src="penrose.js"></script>
+  <script type="module" src="index.js"></script>
 </html>

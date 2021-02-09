@@ -1,6 +1,57 @@
+import {getById} from "./library/typescript/client/client-misc.js";
+
 const φ = (1 + Math.sqrt(5)) / 2;
-const longLength = 17;
+const longLength = 60;
 const shortLength = longLength / φ;
+
+export class CanvasAdapter {
+  public readonly canvas : HTMLCanvasElement;
+  public readonly context : CanvasRenderingContext2D;
+  private xOffset = 0;
+  private yOffset = 0;
+  private scale = 1;
+  constructor(canvas : HTMLCanvasElement | string) {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.canvas = canvas;
+    } else {
+      this.canvas = getById(canvas, HTMLCanvasElement);
+    }
+    this.context = this.canvas.getContext("2d")!;
+    this.recenter();
+  }
+  private recenter() {
+    this.xOffset = this.canvas.width / 2;
+    this.yOffset = this.canvas.height / 2;
+  }
+  public intoCanvasSpace(point : Point) {
+    return { x : point.x * this.scale + this.xOffset, y : this.yOffset - point.y * this.scale };
+  }
+  public moveTo(point : Point) {
+    const { x, y } = this.intoCanvasSpace(point);
+    this.context.moveTo(x, y);
+  }
+  public lineTo(point : Point) {
+    const { x, y } = this.intoCanvasSpace(point);
+    this.context.lineTo(x, y);
+  }
+  public makeClosedPolygon(points : readonly Point[]) {
+    this.context.beginPath();
+    points.forEach((point, index) => {
+      if (index == 0) {
+        this.moveTo(point);
+      } else {
+        this.lineTo(point);
+      }
+    });
+    this.context.closePath();
+  }
+  setActualPixelSize() {
+    const canvas = this.canvas;
+    const style = canvas.style;
+    style.width = (canvas.width / devicePixelRatio + "px");
+    style.height = (canvas.height / devicePixelRatio + "px");
+  }
+}
 
 export class Point {
   private constructor(public readonly x: number, public readonly y: number) {}
@@ -111,6 +162,10 @@ const a216 = fromInteriorAngle(216);
 
 export class Shape {
   public readonly segments: readonly Segment[];
+
+  get points() {
+    return this.segments.map(segment => segment.from);
+  }
 
   private constructor(firstSegment: Segment, shapeInfo: ShapeInfo) {
     const segments = [firstSegment];
