@@ -1,7 +1,7 @@
 import {getById} from "./library/typescript/client/client-misc.js";
 
 const φ = (1 + Math.sqrt(5)) / 2;
-const longLength = 60;
+const longLength = 90;
 const shortLength = longLength / φ;
 
 export class CanvasAdapter {
@@ -33,6 +33,10 @@ export class CanvasAdapter {
   public lineTo(point : Point) {
     const { x, y } = this.intoCanvasSpace(point);
     this.context.lineTo(x, y);
+  }
+  public addToPath(segment : Segment) {
+    this.moveTo(segment.from);
+    this.lineTo(segment.to);
   }
   public makeClosedPolygon(points : readonly Point[]) {
     this.context.beginPath();

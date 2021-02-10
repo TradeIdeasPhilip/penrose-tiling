@@ -1,6 +1,6 @@
 import { getById } from "./library/typescript/client/client-misc.js";
 var φ = (1 + Math.sqrt(5)) / 2;
-var longLength = 60;
+var longLength = 90;
 var shortLength = longLength / φ;
 var CanvasAdapter = (function () {
     function CanvasAdapter(canvas) {
@@ -30,6 +30,10 @@ var CanvasAdapter = (function () {
     CanvasAdapter.prototype.lineTo = function (point) {
         var _a = this.intoCanvasSpace(point), x = _a.x, y = _a.y;
         this.context.lineTo(x, y);
+    };
+    CanvasAdapter.prototype.addToPath = function (segment) {
+        this.moveTo(segment.from);
+        this.lineTo(segment.to);
     };
     CanvasAdapter.prototype.makeClosedPolygon = function (points) {
         var _this = this;
