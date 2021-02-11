@@ -6,3 +6,10 @@
 .main input {
   align-self: stretch;
 }
+#rangeHolder {
+  display: flex;
+  align-self: stretch;
+}
+#range {
+  flex-grow: 1;
+}
