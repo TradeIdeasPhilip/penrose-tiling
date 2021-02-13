@@ -48,7 +48,16 @@ var CanvasAdapter = (function () {
         });
         this.context.closePath();
     };
-    CanvasAdapter.prototype.setActualPixelSize = function () {
+    CanvasAdapter.prototype.makeBitmapMatchElement = function () {
+        var canvas = this.canvas;
+        var style = canvas.style;
+        var width = canvas.offsetWidth;
+        var height = canvas.offsetHeight;
+        canvas.width = width * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
+        this.recenter();
+    };
+    CanvasAdapter.prototype.makeElementMatchBitmap = function () {
         var canvas = this.canvas;
         var style = canvas.style;
         style.width = (canvas.width / devicePixelRatio + "px");
@@ -63,8 +72,25 @@ var Point = (function () {
         this.y = y;
     }
     Point.find = function (x, y) {
-        return new Point(x, y);
+        var found;
+        for (var _i = 0, _a = Point.all; _i < _a.length; _i++) {
+            var point = _a[_i];
+            var diff = Math.hypot(x - point.x, y - point.y);
+            if (diff < 1) {
+                found = point;
+                if (diff > 0) {
+                    console.log("Point.find", { x: x, y: y, point: point, diff: diff });
+                }
+                break;
+            }
+        }
+        if (!found) {
+            found = new Point(x, y);
+            this.all.push(found);
+        }
+        return found;
     };
+    Point.all = [];
     Point.ORIGIN = Point.find(0, 0);
     return Point;
 }());
@@ -85,6 +111,9 @@ var Segment = (function () {
         this.fromDot = fromDot;
         this.long = long;
     }
+    Segment.prototype.complements = function (that) {
+        return (this.from == that.to) && (this.to == that.from) && (this.fromDot == that.toDot) && (this.long == that.long);
+    };
     Object.defineProperty(Segment.prototype, "toDot", {
         get: function () {
             return !this.fromDot;

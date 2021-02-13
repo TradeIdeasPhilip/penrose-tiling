@@ -6,23 +6,34 @@ var range = getById("range", HTMLInputElement);
 var selectPrevious = getById("selectPrevious", HTMLButtonElement);
 var selectNext = getById("selectNext", HTMLButtonElement);
 var canvasAdapter = new CanvasAdapter("canvas");
-canvasAdapter.setActualPixelSize();
+canvasAdapter.makeBitmapMatchElement();
 var context = canvasAdapter.context;
 var available = [];
+function addToAvailable(toAdd) {
+    if (toAdd instanceof Segment) {
+        toAdd = [toAdd];
+    }
+    else if (toAdd instanceof Shape) {
+        toAdd = toAdd.segments;
+    }
+    for (var _i = 0, toAdd_1 = toAdd; _i < toAdd_1.length; _i++) {
+        var segmentToAdd = toAdd_1[_i];
+        var index = available.findIndex(segmentToAdd.complements, segmentToAdd);
+        if (index < 0) {
+            available.push(segmentToAdd);
+        }
+        else {
+            available.splice(index, 1);
+        }
+    }
+    updateGuiToMatchAvailable();
+}
 function getSelectedIndex() {
     return parseInt(range.value);
 }
 function setSelectedIndex(index) {
     range.value = index.toString();
     updateGuiToMatchAvailable();
-}
-function takeSelectedSegment() {
-    var index = getSelectedIndex();
-    var result = available[index];
-    if (result) {
-        available.splice(index, 1);
-    }
-    return result;
 }
 function getSelectedSegment() {
     var index = getSelectedIndex();
@@ -52,7 +63,7 @@ function updateGuiToMatchAvailable() {
     context.stroke();
 }
 function add(type) {
-    var selectedSegment = takeSelectedSegment();
+    var selectedSegment = getSelectedSegment();
     var newSegment = selectedSegment ? selectedSegment.invert() : Segment.create();
     var dart = type == "dart";
     var shape = Shape[dart ? "createDart" : "createKite"](newSegment);
@@ -63,8 +74,7 @@ function add(type) {
     context.lineWidth = 9.6;
     context.lineJoin = "round";
     context.stroke();
-    available.push.apply(available, shape.segments);
-    updateGuiToMatchAvailable();
+    addToAvailable(shape);
 }
 addKiteButton.addEventListener("click", function () {
     add("kite");

@@ -13,3 +13,7 @@
 #range {
   flex-grow: 1;
 }
+#canvas {
+  height: 20em;
+  width : 35.55em;
+}

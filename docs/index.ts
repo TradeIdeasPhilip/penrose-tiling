@@ -9,10 +9,27 @@ const selectPrevious = getById("selectPrevious", HTMLButtonElement);
 const selectNext = getById("selectNext", HTMLButtonElement);
 
 const canvasAdapter = new CanvasAdapter("canvas");
-canvasAdapter.setActualPixelSize();
+canvasAdapter.makeBitmapMatchElement();
 const context = canvasAdapter.context;
 
 const available : Segment[] = [];
+
+function addToAvailable(toAdd : Segment | readonly Segment[] | Shape) {
+  if (toAdd instanceof Segment) {
+    toAdd = [toAdd];
+  } else if (toAdd instanceof Shape) {
+    toAdd = toAdd.segments;
+  }
+  for (const segmentToAdd of toAdd) {
+    const index = available.findIndex(segmentToAdd.complements, segmentToAdd);
+    if (index < 0) {
+      available.push(segmentToAdd);
+    } else {
+      available.splice(index, 1);
+    }
+  }
+  updateGuiToMatchAvailable();
+}
 
 function getSelectedIndex() : number {
   return parseInt(range.value);
@@ -21,15 +38,6 @@ function getSelectedIndex() : number {
 function setSelectedIndex(index : number) {
   range.value = index.toString();
   updateGuiToMatchAvailable();
-}
-
-function takeSelectedSegment() : Segment | undefined {
-  const index = getSelectedIndex();
-  const result = available[index];
-  if (result) {
-    available.splice(index, 1);
-  }
-  return result;
 }
 
 function getSelectedSegment() : Segment | undefined {
@@ -62,7 +70,7 @@ function updateGuiToMatchAvailable() {
 }
 
 function add(type : "kite" | "dart") {
-  const selectedSegment = takeSelectedSegment();
+  const selectedSegment = getSelectedSegment();
   const newSegment = selectedSegment?selectedSegment.invert():Segment.create();
   const dart = type == "dart";
   const shape = Shape[dart?"createDart":"createKite"](newSegment);
@@ -73,10 +81,7 @@ function add(type : "kite" | "dart") {
   context.lineWidth = 9.6;
   context.lineJoin = "round";
   context.stroke();
-  // The first time we just add all four segments.
-  // Later we have to remove used ones, TODO.
-  available.push(...shape.segments);
-  updateGuiToMatchAvailable();
+  addToAvailable(shape);
 }
 
 addKiteButton.addEventListener("click", () => {

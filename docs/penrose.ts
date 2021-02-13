@@ -4,6 +4,10 @@ const φ = (1 + Math.sqrt(5)) / 2;
 const longLength = 90;
 const shortLength = longLength / φ;
 
+/**
+ * This is a wrapper around a Canvas.  Mostly it is used to translate between
+ * internal coordinates and Canvas coordinates.
+ */
 export class CanvasAdapter {
   public readonly canvas : HTMLCanvasElement;
   public readonly context : CanvasRenderingContext2D;
@@ -23,21 +27,54 @@ export class CanvasAdapter {
     this.xOffset = this.canvas.width / 2;
     this.yOffset = this.canvas.height / 2;
   }
+
+  /**
+   * @param point The point in internal coordinates.
+   * The origin is in the center.
+   * Positive numbers move right and up.
+   * Like in math class!
+   * @returns The point in Canvas coordinates.
+   * The origin is at the top left.
+   * Positive numbers move right and down.
+   */
   public intoCanvasSpace(point : Point) {
     return { x : point.x * this.scale + this.xOffset, y : this.yOffset - point.y * this.scale };
   }
+
+  /**
+   * Add a new point to the end of the path.
+   * Jump directly to this point without adding a line segment.
+   * @param point The new point to add, in internal coordinates.
+   */
   public moveTo(point : Point) {
     const { x, y } = this.intoCanvasSpace(point);
     this.context.moveTo(x, y);
   }
+
+  /**
+   * Add a new point to the end of the path.
+   * Add a line segment from the previous last point to this one.
+   * @param point The new point to add, in internal coordinates.
+   */
   public lineTo(point : Point) {
     const { x, y } = this.intoCanvasSpace(point);
     this.context.lineTo(x, y);
   }
+
+  /**
+   * Add this to the end of the path.
+   * This segment might not be touching any other parts of the path.
+   * @param segment The new segment to add.
+   */
   public addToPath(segment : Segment) {
     this.moveTo(segment.from);
     this.lineTo(segment.to);
   }
+
+  /**
+   * Create a new closed path.
+   * @param points The vertices of the new polygon.
+   */
   public makeClosedPolygon(points : readonly Point[]) {
     this.context.beginPath();
     points.forEach((point, index) => {
@@ -49,7 +86,32 @@ export class CanvasAdapter {
     });
     this.context.closePath();
   }
-  setActualPixelSize() {
+
+  /**
+   * Set the number of pixels in the bitmap backing the canvas to match the number of pixels shown on the screen.
+   * That used to be the default.
+   * Now web browsers are likely to lie about the number of pixels by default, so old web pages are easier to read on 4k monitors.
+   * However, the image quality suffers.
+   * This function restores the quality of your 4k monitor.
+   */
+  makeBitmapMatchElement() {
+    const canvas = this.canvas;
+    const style = canvas.style;
+    const width = canvas.offsetWidth;
+    const height = canvas.offsetHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    this.recenter();
+  }
+
+  /**
+   * Set the number of pixels shown on the screen to match the number of pixels in the bitmap backing the canvas.
+   * That used to be the default.
+   * Now web browsers are likely to lie about the number of pixels by default, so old web pages are easier to read on 4k monitors.
+   * However, the image quality suffers.
+   * This function restores the quality of your 4k monitor.
+   */
+  makeElementMatchBitmap() {
     const canvas = this.canvas;
     const style = canvas.style;
     style.width = (canvas.width / devicePixelRatio + "px");
@@ -58,13 +120,28 @@ export class CanvasAdapter {
 }
 
 export class Point {
+  // TODO Use a more efficient data structure.
+  private static readonly all : Point[] = [];
+
   private constructor(public readonly x: number, public readonly y: number) {}
 
-  static find(x: number, y: number) {
-    // TODO reuse these!  Create a list of known items.  Deal with round off error to find
-    // identical items.  Only create a new item if we can't find an existing one that is
-    // close enough.
-    return new Point(x, y);
+  static find(x: number, y: number) : Point {
+    let found : Point | undefined; 
+    for (const point of Point.all) {
+      const diff = Math.hypot(x - point.x, y - point.y);
+      if (diff < 1) {
+        found = point;
+        if (diff > 0) {
+          console.log("Point.find", { x, y, point, diff});
+        }
+        break;
+      }
+    }
+    if (!found) {
+      found = new Point(x, y);
+      this.all.push(found);
+    }
+    return found;
   }
 
   static readonly ORIGIN = Point.find(0, 0);
@@ -111,6 +188,10 @@ class IntelliSenseTest {
       public readonly long: boolean
     ) {}
   
+    complements(that : Segment) {
+      return (this.from == that.to) && (this.to == that.from) && (this.fromDot == that.toDot) && (this.long == that.long);
+    }
+
   /**
    * The dot is closest to `to`.
    */
