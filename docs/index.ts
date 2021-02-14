@@ -81,6 +81,8 @@ class Available {
       if (toDelete) {
         // We tried to add a particle and its antiparticle so they instantly annihilate each other in a burst of pure energy.
         this.delete(toDelete);
+        // It's tempting to set the forcedMove property of each piece to be the type of the other piece.
+        // It's not really required, but it might be used in some assertions in VertexGroup.
       } else {
         this.selection ??= segmentToAdd;
         this.available.add(segmentToAdd);

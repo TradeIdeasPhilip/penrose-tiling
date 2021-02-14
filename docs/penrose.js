@@ -295,6 +295,26 @@ export class VertexGroup {
                     wantsDart.forEach(segment => segment.forcedMove = "dart");
                 }
             }
+            else if (kiteLong.length >= 3) {
+                if (kiteLong.length < 5) {
+                    kiteLong.forEach(vertex => {
+                        vertex.to.forcedMove = "kite";
+                        vertex.from.forcedMove = "kite";
+                    });
+                }
+            }
+            else if (kiteShort.length == 1) {
+                if ((dart.length == 2) && (kiteLong.length < 2)) {
+                    dart.forEach(vertex => {
+                        if (vertex.to.long) {
+                            vertex.to.forcedMove = "kite";
+                        }
+                        else {
+                            vertex.from.forcedMove = "kite";
+                        }
+                    });
+                }
+            }
         }
         else {
         }
