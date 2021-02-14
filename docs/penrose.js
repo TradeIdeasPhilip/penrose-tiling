@@ -135,6 +135,17 @@ export class Segment {
         const to = Point.find(from.x + Δx, from.y + Δy);
         return new this(from, to, fromDot, long);
     }
+    get forcedMove() {
+        return this._forcedMove;
+    }
+    set forcedMove(newValue) {
+        if (newValue !== this._forcedMove) {
+            if (this._forcedMove) {
+                throw new Error("wtf");
+            }
+            this._forcedMove = newValue;
+        }
+    }
 }
 function fromInteriorAngle(degrees) {
     return ((180 - degrees) / 180) * Math.PI;
@@ -144,7 +155,8 @@ const a72 = fromInteriorAngle(72);
 const a144 = fromInteriorAngle(144);
 const a216 = fromInteriorAngle(216);
 export class Shape {
-    constructor(firstSegment, shapeInfo) {
+    constructor(firstSegment, shapeInfo, type) {
+        this.type = type;
         const segments = [firstSegment];
         while (segments.length < 4) {
             const previous = segments[segments.length - 1];
@@ -164,7 +176,7 @@ export class Shape {
         return { fromDot, long, angle };
     }
     static createKite(segment) {
-        return new this(segment, this.kiteInfo);
+        return new this(segment, this.kiteInfo, "kite");
     }
     static dartInfo(previous) {
         const fromDot = !previous.fromDot;
@@ -173,7 +185,7 @@ export class Shape {
         return { fromDot, long, angle };
     }
     static createDart(segment) {
-        const result = new this(segment, this.dartInfo);
+        const result = new this(segment, this.dartInfo, "dart");
         result.segments.forEach(segment => {
             if (segment.short) {
                 segment.forcedMove = "kite";
@@ -202,5 +214,98 @@ export class Shape {
         }
     }
 }
-window.Penrose = { Point, Segment, Shape };
+export class Vertex {
+    constructor(to, from, shape) {
+        this.to = to;
+        this.from = from;
+        this.shape = shape;
+        if (to.to != from.from) {
+            throw new Error("wtf");
+        }
+    }
+    get point() {
+        return this.to.to;
+    }
+    get dot() {
+        return this.to.toDot;
+    }
+    get type() {
+        return this.shape.type;
+    }
+    isAdjacentTo(that) {
+        if (this.point != that.point) {
+            throw new Error("wtf");
+        }
+        if (this.to.complements(that.from)) {
+            return { to: this, from: that };
+        }
+        if (this.from.complements(that.to)) {
+            return { to: that, from: this };
+        }
+        return;
+    }
+}
+export class VertexGroup {
+    constructor() {
+        this.vertices = [];
+    }
+    static addShape(shape) {
+        shape.segments.forEach((toPoint, index, array) => {
+            const fromPoint = array[(index + 1) % array.length];
+            this.addVertex(new Vertex(toPoint, fromPoint, shape));
+        });
+    }
+    static addVertex(vertex) {
+        let group = this.all.get(vertex.point);
+        if (!group) {
+            group = new this();
+            this.all.set(vertex.point, group);
+        }
+        group.addVertex(vertex);
+    }
+    addVertex(vertex) {
+        this.vertices.push(vertex);
+        this.checkForForce();
+    }
+    checkForForce() {
+        if (this.dot) {
+            const kiteLong = [];
+            const kiteShort = [];
+            const dart = [];
+            this.vertices.forEach(vertex => {
+                if (vertex.type == "dart") {
+                    dart.push(vertex);
+                }
+                else {
+                    if (vertex.to.short) {
+                        kiteShort.push(vertex);
+                    }
+                    else {
+                        kiteLong.push(vertex);
+                    }
+                }
+            });
+            if (kiteShort.length == 2) {
+                if (dart.length < 2) {
+                    const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
+                    if (!adjacent) {
+                        throw new Error("wtf");
+                    }
+                    const wantsDart = [adjacent.from.to, adjacent.to.from];
+                    wantsDart.forEach(segment => segment.forcedMove = "dart");
+                }
+            }
+        }
+        else {
+        }
+    }
+    get dot() {
+        return this.vertices[0].dot;
+    }
+    get point() {
+        return this.vertices[0].point;
+    }
+}
+VertexGroup.all = new Map();
+window.Penrose = { Point, Segment, Shape, Vertex, VertexGroup };
 //# sourceMappingURL=penrose.js.map

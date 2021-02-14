@@ -242,7 +242,21 @@ class IntelliSenseTest {
     return new this(from, to, fromDot, long);
   }
 
-  forcedMove : "kite" | "dart" | undefined;
+  private _forcedMove : "kite" | "dart" | undefined;
+
+  get forcedMove() {
+    return this._forcedMove;
+  }
+
+  set forcedMove(newValue) {
+    if (newValue !== this._forcedMove) {
+      if (this._forcedMove) {
+        // If we tried to change the value, and the old value was not undefined, this is an illegal change.
+        throw new Error("wtf");
+      }
+      this._forcedMove = newValue;
+    }
+  }
 }
 
 type ShapeInfo = (previous: {
@@ -279,7 +293,7 @@ export class Shape {
     return this.segments.map(segment => segment.from);
   }
 
-  private constructor(firstSegment: Segment, shapeInfo: ShapeInfo) {
+  private constructor(firstSegment: Segment, shapeInfo: ShapeInfo, public readonly type : "kite" | "dart") {
     const segments = [firstSegment];
     while (segments.length < 4) {
       const previous = segments[segments.length - 1];
@@ -305,7 +319,7 @@ export class Shape {
   }
 
   static createKite(segment: Segment): Shape {
-    return new this(segment, this.kiteInfo);
+    return new this(segment, this.kiteInfo, "kite");
   }
 
   private static dartInfo(
@@ -318,7 +332,7 @@ export class Shape {
   }
 
   static createDart(segment: Segment): Shape {
-    const result = new this(segment, this.dartInfo);
+    const result = new this(segment, this.dartInfo, "dart");
     result.segments.forEach(segment => {
       if (segment.short) {
         segment.forcedMove = "kite";
@@ -348,5 +362,130 @@ export class Shape {
 
 }
 
+/**
+ * A `Vertex` is a corner of a polygon.
+ * This class helps us find all of the `Vertex`'s that meet at a given point.
+ */
+export class Vertex {
+  /**
+   * 
+   * @param to The segment leading *to* this `Vertex`.
+   * @param from The segment leading away *from* this `Vertex`.
+   * @param shape The `Vertex` is part of this shape.
+   */
+  constructor(public readonly to : Segment, public readonly from : Segment, public readonly shape : Shape) {
+    if (to.to != from.from) {
+      throw new Error("wtf");
+    }
+  }
+  get point() {
+    return this.to.to;
+  }
+  get dot() {
+    return this.to.toDot;
+  }
+  get type() {
+    return this.shape.type;
+  }
+
+  /**
+   * See if two `Vertex`'s share an edge.
+   * @param that The other vertex that we are comparing to `this` one.
+   * @returns undefined if they do not share an edge.
+   * If they do share end edge then this will return an object where to.to and from.from point to the common edge.
+   */
+  isAdjacentTo(that : Vertex) : { to : Vertex, from : Vertex } | undefined {
+    if (this.point != that.point) {
+      throw new Error("wtf");
+    }
+    if (this.to.complements(that.from)) {
+      return { to: this, from: that };
+    }
+    if (this.from.complements(that.to)) {
+      return { to: that, from: this };
+    }
+    return;
+  }
+}
+
+/**
+ * A `VertexGroup` is a group of vertices of 1 or more `Shape`'s meeting at a single point.
+ */
+export class VertexGroup {
+  private readonly vertices : Vertex[] = [];
+
+  private static readonly all = new Map<Point, VertexGroup>();
+
+  static addShape(shape : Shape) {
+    shape.segments.forEach((toPoint, index, array) => {
+      const fromPoint = array[(index + 1) % array.length];
+      this.addVertex(new Vertex(toPoint, fromPoint, shape));
+    });
+  }
+
+  private static addVertex(vertex : Vertex) {
+    let group = this.all.get(vertex.point);
+    if (!group) {
+      group = new this();
+      this.all.set(vertex.point, group);
+    }
+    group.addVertex(vertex);
+  }
+
+  private addVertex(vertex : Vertex) {
+    this.vertices.push(vertex);
+    this.checkForForce();
+  }
+
+  private checkForForce() {
+    if (this.dot) {
+      const kiteLong : Vertex[] = [];
+      const kiteShort : Vertex[] = [];
+      const dart : Vertex[] = [];
+      this.vertices.forEach(vertex => {
+        if (vertex.type == "dart") {
+          dart.push(vertex);
+        } else {
+          if (vertex.to.short) {
+            // The flatter end of the kite, the front of the kite.
+            kiteShort.push(vertex);
+          } else {
+            // The pointier end of the kite, the back end.
+            kiteLong.push(vertex);
+          }
+        }
+      });
+      if (kiteShort.length == 2) {
+        // Must have 2 darts.
+        if (dart.length < 2) {
+          const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
+          if (!adjacent) {
+            throw new Error("wtf");
+          }
+          const wantsDart = [adjacent.from.to, adjacent. to.from];
+          wantsDart.forEach(segment => segment.forcedMove = "dart");
+        }
+      }
+    } else {
+
+    }
+  }
+
+  /**
+   * Use `addShape()` to create one of these.
+   */
+  private constructor() {
+
+  }
+
+  private get dot() {
+    return this.vertices[0].dot;
+  }
+
+  private get point() {
+    return this.vertices[0].point;
+  }
+}
+
 // For the JavaScript console.
-(window as any).Penrose = { Point, Segment, Shape };
+(window as any).Penrose = { Point, Segment, Shape, Vertex, VertexGroup };

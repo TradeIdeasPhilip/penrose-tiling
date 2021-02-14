@@ -29,6 +29,11 @@ Seriously, GitHub is just a backup.
 - [Penrose Instructions](http://static1.squarespace.com/static/5754f47fcf80a16bffa02c45/t/57c6b9c5b3db2bd469e914e2/1472641508501/Penrose-instructions.pdf)
 - [Penrose Tiling](https://www.google.com/search?q=penrose+tiling&safe=off&sxsrf=ALeKk01VERXgACpbcT5Z9Zlr9LZ8DXtdDQ:1604429919611&tbm=isch&source=iu&ictx=1&fir=btYSlQ2HpyTX4M%252Cn_n05pddisF3gM%252C%252Fm%252F0cgpp&vet=1&usg=AI4_-kS8TskUx1y1c4WgFqBovgMj6DNPaw&sa=X&ved=2ahUKEwilirObh-fsAhUbHzQIHRiOBnkQ_B16BAgQEAM#imgrc=btYSlQ2HpyTX4M) – More pictures.
 
+I created the following picture from two sources.
+Wikipedia says these are the only 7 ways that kites and darts can share a vertex.
+I added the lavender dots to match the pictures in the handout.
+The word `dot` in the code refers to vertices that contain a lavender dot.
+![All legal vertices](AllLegalVertices.jpg) 
 ## Tools
 
 This is a VS Code Project.

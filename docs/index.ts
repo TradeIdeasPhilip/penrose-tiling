@@ -1,4 +1,4 @@
-import {CanvasAdapter, Point, Segment, Shape} from "./penrose.js";
+import {CanvasAdapter, Point, Segment, Shape, Vertex, VertexGroup} from "./penrose.js";
 
 import {getById} from "./library/typescript/client/client-misc.js";
 
@@ -216,6 +216,7 @@ function add(type : "kite" | "dart", initialSegment? : Segment) {
   context.lineWidth = 9.6;
   context.lineJoin = "round";
   context.stroke();
+  VertexGroup.addShape(shape);
   available.add(shape);
 }
 

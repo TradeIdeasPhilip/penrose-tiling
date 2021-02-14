@@ -1,4 +1,4 @@
-import { CanvasAdapter, Segment, Shape } from "./penrose.js";
+import { CanvasAdapter, Segment, Shape, VertexGroup } from "./penrose.js";
 import { getById } from "./library/typescript/client/client-misc.js";
 const addKiteButton = getById("addKiteButton", HTMLButtonElement);
 const addDartButton = getById("addDartButton", HTMLButtonElement);
@@ -169,6 +169,7 @@ function add(type, initialSegment) {
     context.lineWidth = 9.6;
     context.lineJoin = "round";
     context.stroke();
+    VertexGroup.addShape(shape);
     available.add(shape);
 }
 addKiteButton.addEventListener("click", () => {
