@@ -7,8 +7,8 @@
   align-self: stretch;
 }
 #canvas {
-  height: 20em;
-  width : 35.55em;
+  height: 35em;
+  width : 45em;
 }
 .splitter {
   opacity: 50%;

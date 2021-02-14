@@ -127,7 +127,18 @@ class Available {
     }
 }
 function updateGuiToMatchAvailable() {
-    doForcedMovesButton.disabled = !available.some((segment) => !!segment.forcedMove);
+    let forcedMovesFound = false;
+    for (const segment of available) {
+        if (segment.forcedMove) {
+            forcedMovesFound = true;
+            context.beginPath();
+            context.strokeStyle = bodyColor[segment.forcedMove];
+            context.lineWidth = totalLineWidth;
+            canvasAdapter.addToPath(segment);
+            context.stroke();
+        }
+    }
+    doForcedMovesButton.disabled = !forcedMovesFound;
     const empty = available.empty;
     selectPrevious.disabled = empty;
     selectNext.disabled = empty;
@@ -141,8 +152,8 @@ function updateGuiToMatchAvailable() {
             throw new Error("wtf");
         }
         context.beginPath();
-        context.strokeStyle = "#080";
-        context.lineWidth = 4.5;
+        context.strokeStyle = "darkkhaki";
+        context.lineWidth = innerLineWidth;
         for (const segment of available) {
             if (segment != selectedSegment) {
                 canvasAdapter.addToPath(segment);
@@ -150,13 +161,16 @@ function updateGuiToMatchAvailable() {
         }
         context.stroke();
         context.beginPath();
-        context.strokeStyle = "#AFA";
+        context.strokeStyle = "yellow";
         canvasAdapter.addToPath(selectedSegment);
         addDartButton.disabled = selectedSegment.forcedMove == "kite";
         addKiteButton.disabled = selectedSegment.forcedMove == "dart";
         context.stroke();
     }
 }
+const bodyColor = { kite: "#F0F", dart: "#0FF" };
+const totalLineWidth = 12;
+const innerLineWidth = 4.5;
 function add(type, initialSegment) {
     initialSegment ??= available.getSelection();
     const newSegment = initialSegment
@@ -165,10 +179,10 @@ function add(type, initialSegment) {
     const dart = type == "dart";
     const shape = Shape[dart ? "createDart" : "createKite"](newSegment);
     canvasAdapter.makeClosedPolygon(shape.points);
-    context.fillStyle = dart ? "#0FF" : "#F0F";
+    context.fillStyle = bodyColor[type];
     context.fill();
     context.strokeStyle = "black";
-    context.lineWidth = 9.6;
+    context.lineWidth = totalLineWidth;
     context.lineJoin = "round";
     context.stroke();
     VertexGroup.addShape(shape);

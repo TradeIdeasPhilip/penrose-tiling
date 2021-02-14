@@ -1,7 +1,7 @@
 import { getById } from "./library/typescript/client/client-misc.js";
 
 const φ = (1 + Math.sqrt(5)) / 2;
-const longLength = 90;
+const longLength = 100;
 const shortLength = longLength / φ;
 
 /**
@@ -489,25 +489,24 @@ export class VertexGroup {
         }
       } else if (kiteShort.length == 1) {
         if (dart.length == 2 && kiteLong.length < 2) {
-          dart.forEach((vertex) => {
-            if (vertex.to.long) {
-              vertex.to.forcedMove = "kite";
-            } else {
-              vertex.from.forcedMove = "kite";
-            }
-          });
+          const adjacent = dart.map(dartVertex => dartVertex.isAdjacentTo(kiteShort[0]));
+          const wantsTwoLongKites = adjacent.every(result => result);
+          if (wantsTwoLongKites) {
+            dart.forEach(dartVertex => {
+              const longSegment = dartVertex.from.long?dartVertex.from:dartVertex.to;
+              longSegment.forcedMove = "kite";
+            });
+          }
         }
       }
     } else {
       // This is causing the program to crash.  I'm still troubleshooting that.
-      /*
       if (dart.length == 4) {
         dart.forEach(vertex => {
           vertex.to.forcedMove = "dart";
           vertex.from.forcedMove = "dart";
         })
       }
-      */
     }
   }
 
