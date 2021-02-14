@@ -241,6 +241,8 @@ class IntelliSenseTest {
     const to = Point.find(from.x + Δx, from.y + Δy);
     return new this(from, to, fromDot, long);
   }
+
+  forcedMove : "kite" | "dart" | undefined;
 }
 
 type ShapeInfo = (previous: {
@@ -316,8 +318,34 @@ export class Shape {
   }
 
   static createDart(segment: Segment): Shape {
-    return new this(segment, this.dartInfo);
+    const result = new this(segment, this.dartInfo);
+    result.segments.forEach(segment => {
+      if (segment.short) {
+        segment.forcedMove = "kite";
+      }
+    });
+    return result;
   }
+
+  static createComplementary(segment : Segment) {
+    if (segment.forcedMove) {
+      return this.create(segment, segment.forcedMove);
+    } else {
+      return;
+    }
+  }
+
+  static create(segment : Segment, type : "kite" | "dart") {
+    if (type == "kite") {
+      return this.createKite(segment);
+    } else if (type == "dart") {
+      return this.createDart(segment);
+    } else {
+      console.log("create", { segment, type });
+      throw new Error("wtf");
+    }
+  }
+
 }
 
 // For the JavaScript console.

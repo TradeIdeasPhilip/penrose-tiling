@@ -6,14 +6,15 @@
 .main input {
   align-self: stretch;
 }
-#rangeHolder {
-  display: flex;
-  align-self: stretch;
-}
-#range {
-  flex-grow: 1;
-}
 #canvas {
   height: 20em;
   width : 35.55em;
+}
+.splitter {
+  opacity: 50%;
+  user-select: none;
+  width: 0.5em;
+}
+.button-bar {
+  display: flex;
 }
