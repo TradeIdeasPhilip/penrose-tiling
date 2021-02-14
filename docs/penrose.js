@@ -21,7 +21,10 @@ export class CanvasAdapter {
         this.yOffset = this.canvas.height / 2;
     }
     intoCanvasSpace(point) {
-        return { x: point.x * this.scale + this.xOffset, y: this.yOffset - point.y * this.scale };
+        return {
+            x: point.x * this.scale + this.xOffset,
+            y: this.yOffset - point.y * this.scale,
+        };
     }
     moveTo(point) {
         const { x, y } = this.intoCanvasSpace(point);
@@ -59,8 +62,8 @@ export class CanvasAdapter {
     makeElementMatchBitmap() {
         const canvas = this.canvas;
         const style = canvas.style;
-        style.width = (canvas.width / devicePixelRatio + "px");
-        style.height = (canvas.height / devicePixelRatio + "px");
+        style.width = canvas.width / devicePixelRatio + "px";
+        style.height = canvas.height / devicePixelRatio + "px";
     }
 }
 export class Point {
@@ -105,7 +108,10 @@ export class Segment {
         this.long = long;
     }
     complements(that) {
-        return (this.from == that.to) && (this.to == that.from) && (this.fromDot == that.toDot) && (this.long == that.long);
+        return (this.from == that.to &&
+            this.to == that.from &&
+            this.fromDot == that.toDot &&
+            this.long == that.long);
     }
     get toDot() {
         return !this.fromDot;
@@ -167,7 +173,7 @@ export class Shape {
         this.segments = segments;
     }
     get points() {
-        return this.segments.map(segment => segment.from);
+        return this.segments.map((segment) => segment.from);
     }
     static kiteInfo(previous) {
         const fromDot = !previous.fromDot;
@@ -186,7 +192,7 @@ export class Shape {
     }
     static createDart(segment) {
         const result = new this(segment, this.dartInfo, "dart");
-        result.segments.forEach(segment => {
+        result.segments.forEach((segment) => {
             if (segment.short) {
                 segment.forcedMove = "kite";
             }
@@ -268,23 +274,23 @@ export class VertexGroup {
         this.checkForForce();
     }
     checkForForce() {
-        if (this.dot) {
-            const kiteLong = [];
-            const kiteShort = [];
-            const dart = [];
-            this.vertices.forEach(vertex => {
-                if (vertex.type == "dart") {
-                    dart.push(vertex);
+        const kiteLong = [];
+        const kiteShort = [];
+        const dart = [];
+        this.vertices.forEach((vertex) => {
+            if (vertex.type == "dart") {
+                dart.push(vertex);
+            }
+            else {
+                if (vertex.to.short) {
+                    kiteShort.push(vertex);
                 }
                 else {
-                    if (vertex.to.short) {
-                        kiteShort.push(vertex);
-                    }
-                    else {
-                        kiteLong.push(vertex);
-                    }
+                    kiteLong.push(vertex);
                 }
-            });
+            }
+        });
+        if (this.dot) {
             if (kiteShort.length == 2) {
                 if (dart.length < 2) {
                     const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
@@ -292,20 +298,20 @@ export class VertexGroup {
                         throw new Error("wtf");
                     }
                     const wantsDart = [adjacent.from.to, adjacent.to.from];
-                    wantsDart.forEach(segment => segment.forcedMove = "dart");
+                    wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
                 }
             }
             else if (kiteLong.length >= 3) {
                 if (kiteLong.length < 5) {
-                    kiteLong.forEach(vertex => {
+                    kiteLong.forEach((vertex) => {
                         vertex.to.forcedMove = "kite";
                         vertex.from.forcedMove = "kite";
                     });
                 }
             }
             else if (kiteShort.length == 1) {
-                if ((dart.length == 2) && (kiteLong.length < 2)) {
-                    dart.forEach(vertex => {
+                if (dart.length == 2 && kiteLong.length < 2) {
+                    dart.forEach((vertex) => {
                         if (vertex.to.long) {
                             vertex.to.forcedMove = "kite";
                         }

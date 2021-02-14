@@ -1,4 +1,4 @@
-import { CanvasAdapter, Segment, Shape, VertexGroup } from "./penrose.js";
+import { CanvasAdapter, Segment, Shape, VertexGroup, } from "./penrose.js";
 import { getById } from "./library/typescript/client/client-misc.js";
 const addKiteButton = getById("addKiteButton", HTMLButtonElement);
 const addDartButton = getById("addDartButton", HTMLButtonElement);
@@ -127,7 +127,7 @@ class Available {
     }
 }
 function updateGuiToMatchAvailable() {
-    doForcedMovesButton.disabled = !available.some(segment => !!segment.forcedMove);
+    doForcedMovesButton.disabled = !available.some((segment) => !!segment.forcedMove);
     const empty = available.empty;
     selectPrevious.disabled = empty;
     selectNext.disabled = empty;
@@ -159,7 +159,9 @@ function updateGuiToMatchAvailable() {
 }
 function add(type, initialSegment) {
     initialSegment ??= available.getSelection();
-    const newSegment = initialSegment ? initialSegment.invert() : Segment.create();
+    const newSegment = initialSegment
+        ? initialSegment.invert()
+        : Segment.create();
     const dart = type == "dart";
     const shape = Shape[dart ? "createDart" : "createKite"](newSegment);
     canvasAdapter.makeClosedPolygon(shape.points);
@@ -185,8 +187,8 @@ selectNext.addEventListener("click", () => {
     available.selectNext();
 });
 doForcedMovesButton.addEventListener("click", () => {
-    const inInitialList = available.filter(segment => !!segment.forcedMove);
-    inInitialList.forEach(segment => {
+    const inInitialList = available.filter((segment) => !!segment.forcedMove);
+    inInitialList.forEach((segment) => {
         if (available.has(segment)) {
             const type = segment.forcedMove;
             if (!type) {

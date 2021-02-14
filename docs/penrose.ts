@@ -1,4 +1,4 @@
-import {getById} from "./library/typescript/client/client-misc.js";
+import { getById } from "./library/typescript/client/client-misc.js";
 
 const φ = (1 + Math.sqrt(5)) / 2;
 const longLength = 90;
@@ -9,12 +9,12 @@ const shortLength = longLength / φ;
  * internal coordinates and Canvas coordinates.
  */
 export class CanvasAdapter {
-  public readonly canvas : HTMLCanvasElement;
-  public readonly context : CanvasRenderingContext2D;
+  public readonly canvas: HTMLCanvasElement;
+  public readonly context: CanvasRenderingContext2D;
   private xOffset = 0;
   private yOffset = 0;
   private scale = 1;
-  constructor(canvas : HTMLCanvasElement | string) {
+  constructor(canvas: HTMLCanvasElement | string) {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
     } else {
@@ -37,8 +37,11 @@ export class CanvasAdapter {
    * The origin is at the top left.
    * Positive numbers move right and down.
    */
-  public intoCanvasSpace(point : Point) {
-    return { x : point.x * this.scale + this.xOffset, y : this.yOffset - point.y * this.scale };
+  public intoCanvasSpace(point: Point) {
+    return {
+      x: point.x * this.scale + this.xOffset,
+      y: this.yOffset - point.y * this.scale,
+    };
   }
 
   /**
@@ -46,7 +49,7 @@ export class CanvasAdapter {
    * Jump directly to this point without adding a line segment.
    * @param point The new point to add, in internal coordinates.
    */
-  public moveTo(point : Point) {
+  public moveTo(point: Point) {
     const { x, y } = this.intoCanvasSpace(point);
     this.context.moveTo(x, y);
   }
@@ -56,7 +59,7 @@ export class CanvasAdapter {
    * Add a line segment from the previous last point to this one.
    * @param point The new point to add, in internal coordinates.
    */
-  public lineTo(point : Point) {
+  public lineTo(point: Point) {
     const { x, y } = this.intoCanvasSpace(point);
     this.context.lineTo(x, y);
   }
@@ -66,7 +69,7 @@ export class CanvasAdapter {
    * This segment might not be touching any other parts of the path.
    * @param segment The new segment to add.
    */
-  public addToPath(segment : Segment) {
+  public addToPath(segment: Segment) {
     this.moveTo(segment.from);
     this.lineTo(segment.to);
   }
@@ -75,7 +78,7 @@ export class CanvasAdapter {
    * Create a new closed path.
    * @param points The vertices of the new polygon.
    */
-  public makeClosedPolygon(points : readonly Point[]) {
+  public makeClosedPolygon(points: readonly Point[]) {
     this.context.beginPath();
     points.forEach((point, index) => {
       if (index == 0) {
@@ -114,25 +117,25 @@ export class CanvasAdapter {
   makeElementMatchBitmap() {
     const canvas = this.canvas;
     const style = canvas.style;
-    style.width = (canvas.width / devicePixelRatio + "px");
-    style.height = (canvas.height / devicePixelRatio + "px");
+    style.width = canvas.width / devicePixelRatio + "px";
+    style.height = canvas.height / devicePixelRatio + "px";
   }
 }
 
 export class Point {
   // TODO Use a more efficient data structure.
-  private static readonly all : Point[] = [];
+  private static readonly all: Point[] = [];
 
   private constructor(public readonly x: number, public readonly y: number) {}
 
-  static find(x: number, y: number) : Point {
-    let found : Point | undefined; 
+  static find(x: number, y: number): Point {
+    let found: Point | undefined;
     for (const point of Point.all) {
       const diff = Math.hypot(x - point.x, y - point.y);
       if (diff < 1) {
         found = point;
         if (diff > 0) {
-          console.log("Point.find", { x, y, point, diff});
+          console.log("Point.find", { x, y, point, diff });
         }
         break;
       }
@@ -171,26 +174,31 @@ class IntelliSenseTest {
   ) {}
 }
 
-  export class Segment {
-    /**
-     * `to` and `from` assume that we are moving around the shape counter-clockwise,
-     * i.e. the mathematically positive direction.
-     * ![explanation of dots](https://raw.githubusercontent.com/TradeIdeasPhilip/penrose-tiling/master/docs/kite-dart-dots.png)
-     * @param from Go counter-clockwise to find `to`.
-     * @param to Go clockwise to find `from`.
-     * @param fromDot The dot is closest to `from`.
-     * @param long This segment is longer than some but equal to others.
-     */
-    constructor(
-      public readonly from: Point,
-      public readonly to: Point,
-      public readonly fromDot: boolean,
-      public readonly long: boolean
-    ) {}
-  
-    complements(that : Segment) {
-      return (this.from == that.to) && (this.to == that.from) && (this.fromDot == that.toDot) && (this.long == that.long);
-    }
+export class Segment {
+  /**
+   * `to` and `from` assume that we are moving around the shape counter-clockwise,
+   * i.e. the mathematically positive direction.
+   * ![explanation of dots](https://raw.githubusercontent.com/TradeIdeasPhilip/penrose-tiling/master/docs/kite-dart-dots.png)
+   * @param from Go counter-clockwise to find `to`.
+   * @param to Go clockwise to find `from`.
+   * @param fromDot The dot is closest to `from`.
+   * @param long This segment is longer than some but equal to others.
+   */
+  constructor(
+    public readonly from: Point,
+    public readonly to: Point,
+    public readonly fromDot: boolean,
+    public readonly long: boolean
+  ) {}
+
+  complements(that: Segment) {
+    return (
+      this.from == that.to &&
+      this.to == that.from &&
+      this.fromDot == that.toDot &&
+      this.long == that.long
+    );
+  }
 
   /**
    * The dot is closest to `to`.
@@ -242,7 +250,7 @@ class IntelliSenseTest {
     return new this(from, to, fromDot, long);
   }
 
-  private _forcedMove : "kite" | "dart" | undefined;
+  private _forcedMove: "kite" | "dart" | undefined;
 
   get forcedMove() {
     return this._forcedMove;
@@ -290,10 +298,14 @@ export class Shape {
   public readonly segments: readonly Segment[];
 
   get points() {
-    return this.segments.map(segment => segment.from);
+    return this.segments.map((segment) => segment.from);
   }
 
-  private constructor(firstSegment: Segment, shapeInfo: ShapeInfo, public readonly type : "kite" | "dart") {
+  private constructor(
+    firstSegment: Segment,
+    shapeInfo: ShapeInfo,
+    public readonly type: "kite" | "dart"
+  ) {
     const segments = [firstSegment];
     while (segments.length < 4) {
       const previous = segments[segments.length - 1];
@@ -333,7 +345,7 @@ export class Shape {
 
   static createDart(segment: Segment): Shape {
     const result = new this(segment, this.dartInfo, "dart");
-    result.segments.forEach(segment => {
+    result.segments.forEach((segment) => {
       if (segment.short) {
         segment.forcedMove = "kite";
       }
@@ -341,7 +353,7 @@ export class Shape {
     return result;
   }
 
-  static createComplementary(segment : Segment) {
+  static createComplementary(segment: Segment) {
     if (segment.forcedMove) {
       return this.create(segment, segment.forcedMove);
     } else {
@@ -349,7 +361,7 @@ export class Shape {
     }
   }
 
-  static create(segment : Segment, type : "kite" | "dart") {
+  static create(segment: Segment, type: "kite" | "dart") {
     if (type == "kite") {
       return this.createKite(segment);
     } else if (type == "dart") {
@@ -359,7 +371,6 @@ export class Shape {
       throw new Error("wtf");
     }
   }
-
 }
 
 /**
@@ -368,12 +379,16 @@ export class Shape {
  */
 export class Vertex {
   /**
-   * 
+   *
    * @param to The segment leading *to* this `Vertex`.
    * @param from The segment leading away *from* this `Vertex`.
    * @param shape The `Vertex` is part of this shape.
    */
-  constructor(public readonly to : Segment, public readonly from : Segment, public readonly shape : Shape) {
+  constructor(
+    public readonly to: Segment,
+    public readonly from: Segment,
+    public readonly shape: Shape
+  ) {
     if (to.to != from.from) {
       throw new Error("wtf");
     }
@@ -394,7 +409,7 @@ export class Vertex {
    * @returns undefined if they do not share an edge.
    * If they do share end edge then this will return an object where to.to and from.from point to the common edge.
    */
-  isAdjacentTo(that : Vertex) : { to : Vertex, from : Vertex } | undefined {
+  isAdjacentTo(that: Vertex): { to: Vertex; from: Vertex } | undefined {
     if (this.point != that.point) {
       throw new Error("wtf");
     }
@@ -412,18 +427,18 @@ export class Vertex {
  * A `VertexGroup` is a group of vertices of 1 or more `Shape`'s meeting at a single point.
  */
 export class VertexGroup {
-  private readonly vertices : Vertex[] = [];
+  private readonly vertices: Vertex[] = [];
 
   private static readonly all = new Map<Point, VertexGroup>();
 
-  static addShape(shape : Shape) {
+  static addShape(shape: Shape) {
     shape.segments.forEach((toPoint, index, array) => {
       const fromPoint = array[(index + 1) % array.length];
       this.addVertex(new Vertex(toPoint, fromPoint, shape));
     });
   }
 
-  private static addVertex(vertex : Vertex) {
+  private static addVertex(vertex: Vertex) {
     let group = this.all.get(vertex.point);
     if (!group) {
       group = new this();
@@ -432,29 +447,29 @@ export class VertexGroup {
     group.addVertex(vertex);
   }
 
-  private addVertex(vertex : Vertex) {
+  private addVertex(vertex: Vertex) {
     this.vertices.push(vertex);
     this.checkForForce();
   }
 
   private checkForForce() {
-    if (this.dot) {
-      const kiteLong : Vertex[] = [];
-      const kiteShort : Vertex[] = [];
-      const dart : Vertex[] = [];
-      this.vertices.forEach(vertex => {
-        if (vertex.type == "dart") {
-          dart.push(vertex);
+    const kiteLong: Vertex[] = [];
+    const kiteShort: Vertex[] = [];
+    const dart: Vertex[] = [];
+    this.vertices.forEach((vertex) => {
+      if (vertex.type == "dart") {
+        dart.push(vertex);
+      } else {
+        if (vertex.to.short) {
+          // The flatter end of the kite, the front of the kite.
+          kiteShort.push(vertex);
         } else {
-          if (vertex.to.short) {
-            // The flatter end of the kite, the front of the kite.
-            kiteShort.push(vertex);
-          } else {
-            // The pointier end of the kite, the back end.
-            kiteLong.push(vertex);
-          }
+          // The pointier end of the kite, the back end.
+          kiteLong.push(vertex);
         }
-      });
+      }
+    });
+    if (this.dot) {
       if (kiteShort.length == 2) {
         // Must have 2 darts.
         if (dart.length < 2) {
@@ -462,38 +477,44 @@ export class VertexGroup {
           if (!adjacent) {
             throw new Error("wtf");
           }
-          const wantsDart = [adjacent.from.to, adjacent. to.from];
-          wantsDart.forEach(segment => segment.forcedMove = "dart");
+          const wantsDart = [adjacent.from.to, adjacent.to.from];
+          wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
         }
       } else if (kiteLong.length >= 3) {
         if (kiteLong.length < 5) {
-          kiteLong.forEach(vertex => {
+          kiteLong.forEach((vertex) => {
             vertex.to.forcedMove = "kite";
             vertex.from.forcedMove = "kite";
-          })
+          });
         }
       } else if (kiteShort.length == 1) {
-        if ((dart.length == 2) && (kiteLong.length < 2)) {
-          dart.forEach(vertex => {
+        if (dart.length == 2 && kiteLong.length < 2) {
+          dart.forEach((vertex) => {
             if (vertex.to.long) {
               vertex.to.forcedMove = "kite";
             } else {
               vertex.from.forcedMove = "kite";
             }
-          })
+          });
         }
       }
     } else {
-
+      // This is causing the program to crash.  I'm still troubleshooting that.
+      /*
+      if (dart.length == 4) {
+        dart.forEach(vertex => {
+          vertex.to.forcedMove = "dart";
+          vertex.from.forcedMove = "dart";
+        })
+      }
+      */
     }
   }
 
   /**
    * Use `addShape()` to create one of these.
    */
-  private constructor() {
-
-  }
+  private constructor() {}
 
   private get dot() {
     return this.vertices[0].dot;
