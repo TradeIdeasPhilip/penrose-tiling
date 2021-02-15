@@ -18,3 +18,16 @@
 .button-bar {
   display: flex;
 }
+.hotkey {
+  text-decoration: underline;
+}
+.color-sample {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: solid;
+}
+.color-sample::after {
+  content: '.';
+  opacity: 0;
+}

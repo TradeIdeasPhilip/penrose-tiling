@@ -128,17 +128,6 @@ class Available {
 }
 function updateGuiToMatchAvailable() {
     let forcedMovesFound = false;
-    for (const segment of available) {
-        if (segment.forcedMove) {
-            forcedMovesFound = true;
-            context.beginPath();
-            context.strokeStyle = bodyColor[segment.forcedMove];
-            context.lineWidth = totalLineWidth;
-            canvasAdapter.addToPath(segment);
-            context.stroke();
-        }
-    }
-    doForcedMovesButton.disabled = !forcedMovesFound;
     const empty = available.empty;
     selectPrevious.disabled = empty;
     selectNext.disabled = empty;
@@ -151,26 +140,59 @@ function updateGuiToMatchAvailable() {
         if (!selectedSegment) {
             throw new Error("wtf");
         }
-        context.beginPath();
-        context.strokeStyle = "darkkhaki";
-        context.lineWidth = innerLineWidth;
+        const byColor = {
+            forceKite: [],
+            forceDart: [],
+            available: [],
+            selected: [],
+        };
         for (const segment of available) {
-            if (segment != selectedSegment) {
+            let type;
+            if (segment == selectedSegment) {
+                type = "selected";
+            }
+            else {
+                switch (segment.forcedMove) {
+                    case "dart": {
+                        type = "forceDart";
+                        forcedMovesFound = true;
+                        break;
+                    }
+                    case "kite": {
+                        type = "forceKite";
+                        forcedMovesFound = true;
+                        break;
+                    }
+                    default: {
+                        type = "available";
+                        break;
+                    }
+                }
+            }
+            byColor[type].push(segment);
+        }
+        function draw(color, segments) {
+            context.beginPath();
+            context.strokeStyle = color;
+            context.lineWidth = innerLineWidth;
+            context.lineCap = "round";
+            for (const segment of segments) {
                 canvasAdapter.addToPath(segment);
             }
+            context.stroke();
         }
-        context.stroke();
-        context.beginPath();
-        context.strokeStyle = "yellow";
-        canvasAdapter.addToPath(selectedSegment);
+        draw("darkkhaki", byColor.available);
+        draw(bodyColor.kite, byColor.forceKite);
+        draw(bodyColor.dart, byColor.forceDart);
+        draw("yellow", byColor.selected);
         addDartButton.disabled = selectedSegment.forcedMove == "kite";
         addKiteButton.disabled = selectedSegment.forcedMove == "dart";
-        context.stroke();
     }
+    doForcedMovesButton.disabled = !forcedMovesFound;
 }
 const bodyColor = { kite: "#F0F", dart: "#0FF" };
 const totalLineWidth = 12;
-const innerLineWidth = 4.5;
+const innerLineWidth = 6;
 function add(type, initialSegment) {
     initialSegment ??= available.getSelection();
     const newSegment = initialSegment
@@ -214,4 +236,46 @@ doForcedMovesButton.addEventListener("click", () => {
 });
 const available = new Available(updateGuiToMatchAvailable);
 updateGuiToMatchAvailable();
+document.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) {
+        return;
+    }
+    switch (ev.code) {
+        case "ArrowLeft": {
+            selectPrevious.click();
+            ev.cancelBubble = true;
+            break;
+        }
+        case "ArrowRight": {
+            selectNext.click();
+            ev.cancelBubble = true;
+            break;
+        }
+        case "KeyK": {
+            addKiteButton.click();
+            ev.cancelBubble = true;
+            break;
+        }
+        case "KeyD": {
+            addDartButton.click();
+            ev.cancelBubble = true;
+            break;
+        }
+        case "KeyF": {
+            doForcedMovesButton.click();
+            ev.cancelBubble = true;
+            break;
+        }
+    }
+});
+[
+    { element: addDartButton, type: "dart" },
+    { element: addKiteButton, type: "kite" },
+].forEach((item) => {
+    item.element.querySelectorAll(".color-sample").forEach((sample) => {
+        if (sample instanceof HTMLElement) {
+            sample.style.backgroundColor = bodyColor[item.type];
+        }
+    });
+});
 //# sourceMappingURL=index.js.map
