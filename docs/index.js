@@ -136,37 +136,27 @@ function updateGuiToMatchAvailable() {
         addKiteButton.disabled = false;
     }
     else {
-        const selectedSegment = available.getSelection();
-        if (!selectedSegment) {
-            throw new Error("wtf");
-        }
         const byColor = {
             forceKite: [],
             forceDart: [],
             available: [],
-            selected: [],
         };
         for (const segment of available) {
             let type;
-            if (segment == selectedSegment) {
-                type = "selected";
-            }
-            else {
-                switch (segment.forcedMove) {
-                    case "dart": {
-                        type = "forceDart";
-                        forcedMovesFound = true;
-                        break;
-                    }
-                    case "kite": {
-                        type = "forceKite";
-                        forcedMovesFound = true;
-                        break;
-                    }
-                    default: {
-                        type = "available";
-                        break;
-                    }
+            switch (segment.forcedMove) {
+                case "dart": {
+                    type = "forceDart";
+                    forcedMovesFound = true;
+                    break;
+                }
+                case "kite": {
+                    type = "forceKite";
+                    forcedMovesFound = true;
+                    break;
+                }
+                default: {
+                    type = "available";
+                    break;
                 }
             }
             byColor[type].push(segment);
@@ -184,7 +174,13 @@ function updateGuiToMatchAvailable() {
         draw("darkkhaki", byColor.available);
         draw(bodyColor.kite, byColor.forceKite);
         draw(bodyColor.dart, byColor.forceDart);
-        draw("yellow", byColor.selected);
+        const selectedSegment = available.getSelection();
+        if (!selectedSegment) {
+            throw new Error("wtf");
+        }
+        context.setLineDash([innerLineWidth, innerLineWidth * 2.1]);
+        draw("yellow", [selectedSegment]);
+        context.setLineDash([]);
         addDartButton.disabled = selectedSegment.forcedMove == "kite";
         addKiteButton.disabled = selectedSegment.forcedMove == "dart";
     }
@@ -267,15 +263,5 @@ document.addEventListener("keydown", (ev) => {
             break;
         }
     }
-});
-[
-    { element: addDartButton, type: "dart" },
-    { element: addKiteButton, type: "kite" },
-].forEach((item) => {
-    item.element.querySelectorAll(".color-sample").forEach((sample) => {
-        if (sample instanceof HTMLElement) {
-            sample.style.backgroundColor = bodyColor[item.type];
-        }
-    });
 });
 //# sourceMappingURL=index.js.map

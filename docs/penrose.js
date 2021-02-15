@@ -235,6 +235,29 @@ export class Vertex {
     get type() {
         return this.shape.type;
     }
+    get segments() {
+        return [this.to, this.from];
+    }
+    getUnique(predicate) {
+        let count = 0;
+        let result;
+        this.segments.forEach(segment => {
+            if (segment[predicate]) {
+                result = segment;
+                count++;
+            }
+        });
+        if (count == 1) {
+            return result;
+        }
+        throw new Error(count + " segments are " + predicate);
+    }
+    get long() {
+        return this.getUnique("long");
+    }
+    get short() {
+        return this.getUnique("short");
+    }
     isAdjacentTo(that) {
         if (this.point != that.point) {
             throw new Error("wtf");
@@ -296,6 +319,10 @@ export class VertexGroup {
                     }
                     const wantsDart = [adjacent.from.to, adjacent.to.from];
                     wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
+                    dart.forEach(dartVertex => {
+                        const longSegment = dartVertex.from.long ? dartVertex.from : dartVertex.to;
+                        longSegment.forcedMove = "dart";
+                    });
                 }
             }
             else if (kiteLong.length >= 3) {
@@ -319,6 +346,18 @@ export class VertexGroup {
                         });
                     }
                 }
+                else if (kiteLong.length > 0) {
+                    kiteShort[0].segments.forEach(segment => {
+                        segment.forcedMove = "dart";
+                    });
+                    dart.forEach(dartVertex => {
+                        dartVertex.segments.forEach(segment => {
+                            segment.forcedMove = "kite";
+                        });
+                    });
+                    kiteLong.forEach(kiteVertex => {
+                    });
+                }
             }
         }
         else {
@@ -338,7 +377,12 @@ export class VertexGroup {
                     kite.push(vertex);
                 }
             });
-            if (dartIn.length == 4) {
+            if (dartOut.length == 1) {
+                if (kite.length == 1) {
+                    kite[0].long.forcedMove = "kite";
+                }
+            }
+            else if (dartIn.length == 4) {
                 this.vertices.forEach((vertex) => {
                     vertex.to.forcedMove = "dart";
                     vertex.from.forcedMove = "dart";

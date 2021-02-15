@@ -403,6 +403,33 @@ export class Vertex {
     return this.shape.type;
   }
 
+  get segments() {
+    return [this.to, this.from];
+  }
+
+  private getUnique(predicate : "long" | "short") {
+    let count = 0;
+    let result : Segment | undefined;
+    this.segments.forEach(segment => {
+      if (segment[predicate]) {
+        result = segment;
+        count++;
+      }
+    });
+    if (count == 1) {
+      return result!;
+    }
+    throw new Error(count + " segments are " + predicate);
+  }
+
+  get long() {
+    return this.getUnique("long");
+  }
+
+  get short() {
+    return this.getUnique("short");
+  }
+
   /**
    * See if two `Vertex`'s share an edge.
    * @param that The other vertex that we are comparing to `this` one.
@@ -497,6 +524,11 @@ export class VertexGroup {
           }
           const wantsDart = [adjacent.from.to, adjacent.to.from];
           wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
+          // This next part would be optional if we did all of the forced moves first.
+          dart.forEach(dartVertex => {
+            const longSegment = dartVertex.from.long?dartVertex.from:dartVertex.to;
+            longSegment.forcedMove = "dart";
+          })
         }
       } else if (kiteLong.length >= 3) {
         // This must be case C.  We must have 5 kites.
@@ -522,11 +554,33 @@ export class VertexGroup {
               longSegment.forcedMove = "kite";
             });
           }
+          // TODO if there is example one kiteLong, then mark it
+          // so the open side is another kite long.
+        } else if (kiteLong.length > 0) {
+          // We have at least one kite of each type so we know this
+          // is case B.
+          kiteShort[0].segments.forEach(segment => {
+            segment.forcedMove = "dart";
+          });
+          dart.forEach(dartVertex => {
+            dartVertex.segments.forEach(segment => {
+              segment.forcedMove = "kite";
+            })
+          });
+          kiteLong.forEach(kiteVertex => {
+            // TODO use the kiteShort to figure out which
+            // position we are in (bottom left or bottom right of
+            // case B) then force both segments accordingly.
+          })
         }
-      }
+      } 
       // TODO there is another way to get to case B.
       // If all three kites are there, you know it's case B,
       // so add some darts.
+      // What if there were just two darts and they were not
+      // adjacent?  That is also definitely B.  If you hit
+      // "Do forced moves" you'll get to there eventually, but
+      // we want to mark the long sides of the darts immediately.
     } else {
       // No dot.  This must match D, E, F, or G in the picture.
 
@@ -559,10 +613,15 @@ export class VertexGroup {
         }
       });
 
-      // We get case E for free.  Shape.createDart() immediately adds 
-      // the requirement for two kites.  It's tempting to move that code
-      // here for consistency.
-      if (dartIn.length == 4) {
+      if (dartOut.length == 1) {
+        // Case E.
+        // The dart is already annotated correctly by Shape.createDart().
+        // It's tempting to move that code here for consistency.
+        if (kite.length == 1) {
+          // We need a second kite.
+          kite[0].long.forcedMove = "kite";
+        }
+      } else if (dartIn.length == 4) {
         // This must be case G.  We must have 5 darts.
         this.vertices.forEach((vertex) => {
           vertex.to.forcedMove = "dart";
