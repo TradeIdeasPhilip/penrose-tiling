@@ -134,9 +134,9 @@ export class Point {
       const diff = Math.hypot(x - point.x, y - point.y);
       if (diff < 1) {
         found = point;
-        if (diff > 0) {
-          console.log("Point.find", { x, y, point, diff });
-        }
+        //if (diff > 0) {
+        //  console.log("Point.find", { x, y, point, diff });
+        //}
         break;
       }
     }
@@ -453,25 +453,43 @@ export class VertexGroup {
   }
 
   private checkForForce() {
-    const kiteLong: Vertex[] = [];
-    const kiteShort: Vertex[] = [];
-    const dart: Vertex[] = [];
-    this.vertices.forEach((vertex) => {
-      if (vertex.type == "dart") {
-        dart.push(vertex);
-      } else {
-        if (vertex.to.short) {
-          // The flatter end of the kite, the front of the kite.
-          kiteShort.push(vertex);
-        } else {
-          // The pointier end of the kite, the back end.
-          kiteLong.push(vertex);
-        }
-      }
-    });
+    // See AllLegalVertices.jpg for a list of all legal moves.
+    // There are exactly 7 legal ways that kites and darts can meet at a common vertex.
+    // I've assigned letters to match the pictures to the comments.
     if (this.dot) {
+      // This is A, B, or C in our picture.
+
+      /**
+       * Kites with the pointier side touching the common point.
+       * I.e. kites with the longer segments touching the common point.
+       */
+      const kiteLong: Vertex[] = [];
+
+      /**
+       * Kites with the flatter side touching the common point.
+       * I.e. kites with the shorter segments touching the common point.
+       */
+      const kiteShort: Vertex[] = [];
+
+      /**
+       * All darts touching the common point.
+       */
+      const dart: Vertex[] = [];
+
+      this.vertices.forEach((vertex) => {
+        if (vertex.type == "dart") {
+          dart.push(vertex);
+        } else {
+          if (vertex.to.short) {
+            kiteShort.push(vertex);
+          } else {
+            kiteLong.push(vertex);
+          }
+        }
+      });
+
       if (kiteShort.length == 2) {
-        // Must have 2 darts.
+        // This must be case A.  We must have 2 darts.
         if (dart.length < 2) {
           const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
           if (!adjacent) {
@@ -481,6 +499,7 @@ export class VertexGroup {
           wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
         }
       } else if (kiteLong.length >= 3) {
+        // This must be case C.  We must have 5 kites.
         if (kiteLong.length < 5) {
           kiteLong.forEach((vertex) => {
             vertex.to.forcedMove = "kite";
@@ -488,25 +507,75 @@ export class VertexGroup {
           });
         }
       } else if (kiteShort.length == 1) {
+        // This must be case A or B.
         if (dart.length == 2 && kiteLong.length < 2) {
-          const adjacent = dart.map(dartVertex => dartVertex.isAdjacentTo(kiteShort[0]));
-          const wantsTwoLongKites = adjacent.every(result => result);
+          const adjacent = dart.map((dartVertex) =>
+            dartVertex.isAdjacentTo(kiteShort[0])
+          );
+          const wantsTwoLongKites = adjacent.every((result) => result);
           if (wantsTwoLongKites) {
-            dart.forEach(dartVertex => {
-              const longSegment = dartVertex.from.long?dartVertex.from:dartVertex.to;
+          // This must be case B.
+          dart.forEach((dartVertex) => {
+              const longSegment = dartVertex.from.long
+                ? dartVertex.from
+                : dartVertex.to;
               longSegment.forcedMove = "kite";
             });
           }
         }
       }
     } else {
-      // This is causing the program to crash.  I'm still troubleshooting that.
-      if (dart.length == 4) {
-        dart.forEach(vertex => {
+      // No dot.  This must match D, E, F, or G in the picture.
+
+      /**
+       * All kites meeting at this common point.
+       */
+      const kite: Vertex[] = [];
+
+      /**
+       * All darts pointing toward this common point.
+       */
+      const dartIn: Vertex[] = [];
+
+      /**
+       * All darts pointing away from this common point.
+       */
+      const dartOut: Vertex[] = [];
+
+      this.vertices.forEach((vertex) => {
+        if (vertex.type == "dart") {
+          if (vertex.to.short) {
+            dartIn.push(vertex);
+          } else {
+            dartOut.push(vertex);
+          }
+        } else {
+          kite.push(vertex);
+        }
+      });
+
+      // We get case E for free.  Shape.createDart() immediately adds 
+      // the requirement for two kites.  It's tempting to move that code
+      // here for consistency.
+      if (dartIn.length == 4) {
+        // This must be case G.  We must have 5 darts.
+        this.vertices.forEach((vertex) => {
           vertex.to.forcedMove = "dart";
           vertex.from.forcedMove = "dart";
-        })
+        });
       }
+      // TODO:
+      // If exactly 2 kites and exactly 2 darts, case D, add one more dart.
+      // If exactly 2 kites and exactly 1 dart, and the dart is not adjacent to either kite, case D, add two more darts.
+      // If 3 or 4 kites, case F, total 4 kites and 1 dart.
+      // If exactly 2 kites and they are not adjacent, case F.
+      //   If the dart is already in place, just fill in the two missing kites.
+      //   Otherwise the dart will be touching at least on of the existing, but we have to figure out which of the four kite segments to start from.
+      // If exactly 3 darts, and one is not adjacent to either of the other two, then case G.
+      // Case E is definitely as good as it can be!
+      // The others deserve a closer look.
+      //   There can be strange cases,
+      //   especially when the pieces are coming from two different directions.
     }
   }
 

@@ -77,9 +77,6 @@ export class Point {
             const diff = Math.hypot(x - point.x, y - point.y);
             if (diff < 1) {
                 found = point;
-                if (diff > 0) {
-                    console.log("Point.find", { x, y, point, diff });
-                }
                 break;
             }
         }
@@ -274,23 +271,23 @@ export class VertexGroup {
         this.checkForForce();
     }
     checkForForce() {
-        const kiteLong = [];
-        const kiteShort = [];
-        const dart = [];
-        this.vertices.forEach((vertex) => {
-            if (vertex.type == "dart") {
-                dart.push(vertex);
-            }
-            else {
-                if (vertex.to.short) {
-                    kiteShort.push(vertex);
+        if (this.dot) {
+            const kiteLong = [];
+            const kiteShort = [];
+            const dart = [];
+            this.vertices.forEach((vertex) => {
+                if (vertex.type == "dart") {
+                    dart.push(vertex);
                 }
                 else {
-                    kiteLong.push(vertex);
+                    if (vertex.to.short) {
+                        kiteShort.push(vertex);
+                    }
+                    else {
+                        kiteLong.push(vertex);
+                    }
                 }
-            }
-        });
-        if (this.dot) {
+            });
             if (kiteShort.length == 2) {
                 if (dart.length < 2) {
                     const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
@@ -311,11 +308,13 @@ export class VertexGroup {
             }
             else if (kiteShort.length == 1) {
                 if (dart.length == 2 && kiteLong.length < 2) {
-                    const adjacent = dart.map(dartVertex => dartVertex.isAdjacentTo(kiteShort[0]));
-                    const wantsTwoLongKites = adjacent.every(result => result);
+                    const adjacent = dart.map((dartVertex) => dartVertex.isAdjacentTo(kiteShort[0]));
+                    const wantsTwoLongKites = adjacent.every((result) => result);
                     if (wantsTwoLongKites) {
-                        dart.forEach(dartVertex => {
-                            const longSegment = dartVertex.from.long ? dartVertex.from : dartVertex.to;
+                        dart.forEach((dartVertex) => {
+                            const longSegment = dartVertex.from.long
+                                ? dartVertex.from
+                                : dartVertex.to;
                             longSegment.forcedMove = "kite";
                         });
                     }
@@ -323,8 +322,24 @@ export class VertexGroup {
             }
         }
         else {
-            if (dart.length == 4) {
-                dart.forEach(vertex => {
+            const kite = [];
+            const dartIn = [];
+            const dartOut = [];
+            this.vertices.forEach((vertex) => {
+                if (vertex.type == "dart") {
+                    if (vertex.to.short) {
+                        dartIn.push(vertex);
+                    }
+                    else {
+                        dartOut.push(vertex);
+                    }
+                }
+                else {
+                    kite.push(vertex);
+                }
+            });
+            if (dartIn.length == 4) {
+                this.vertices.forEach((vertex) => {
                     vertex.to.forcedMove = "dart";
                     vertex.from.forcedMove = "dart";
                 });
