@@ -524,6 +524,9 @@ export class VertexGroup {
           }
         }
       }
+      // TODO there is another way to get to case B.
+      // If all three kites are there, you know it's case B,
+      // so add some darts.
     } else {
       // No dot.  This must match D, E, F, or G in the picture.
 
@@ -534,17 +537,19 @@ export class VertexGroup {
 
       /**
        * All darts pointing toward this common point.
+       * Figures D, E, F, and G have 3, 0, 1, and 5 of these, respectively.
        */
       const dartIn: Vertex[] = [];
 
       /**
        * All darts pointing away from this common point.
+       * Figures D, E, F, and G have 0, 1, 0, and 0 of these, respectively.
        */
       const dartOut: Vertex[] = [];
 
       this.vertices.forEach((vertex) => {
         if (vertex.type == "dart") {
-          if (vertex.to.short) {
+          if (vertex.to.long) {
             dartIn.push(vertex);
           } else {
             dartOut.push(vertex);

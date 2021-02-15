@@ -327,7 +327,7 @@ export class VertexGroup {
             const dartOut = [];
             this.vertices.forEach((vertex) => {
                 if (vertex.type == "dart") {
-                    if (vertex.to.short) {
+                    if (vertex.to.long) {
                         dartIn.push(vertex);
                     }
                     else {
