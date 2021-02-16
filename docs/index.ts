@@ -71,9 +71,14 @@ class Available {
 
   private delete(segment: Segment) {
     this.available.delete(segment);
-    if (this.selection == segment) {
-      this.selection = pickAny(this.available);
+    const nextPoint = segment.to;
+    let nextSegment = this.find(segment => segment.from == nextPoint);
+    if (!nextSegment) {
+      // This can happen in strange circumstances.
+      // Last time I was trying to fill a hole!
+      nextSegment = pickAny(this.available);
     }
+    this.selection = nextSegment;
   }
 
   add(toAdd: Segment | Iterable<Segment> | Shape) {

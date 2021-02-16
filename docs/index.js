@@ -33,9 +33,12 @@ class Available {
     }
     delete(segment) {
         this.available.delete(segment);
-        if (this.selection == segment) {
-            this.selection = pickAny(this.available);
+        const nextPoint = segment.to;
+        let nextSegment = this.find(segment => segment.from == nextPoint);
+        if (!nextSegment) {
+            nextSegment = pickAny(this.available);
         }
+        this.selection = nextSegment;
     }
     add(toAdd) {
         if (toAdd instanceof Segment) {
