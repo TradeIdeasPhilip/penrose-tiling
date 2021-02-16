@@ -79,6 +79,14 @@ class Available {
         }
         return false;
     }
+    find(predicate) {
+        for (const segment of this.available) {
+            if (predicate(segment)) {
+                return segment;
+            }
+        }
+        return;
+    }
     filter(predicate) {
         const result = [];
         for (const segment of this.available) {
@@ -92,37 +100,27 @@ class Available {
         return this.selection;
     }
     selectNext() {
-        if (this.empty) {
+        if (!this.selection) {
             return;
         }
-        let selectNext = false;
-        for (const segment of this.available) {
-            if (selectNext) {
-                selectNext = false;
-                this.selection = segment;
-                break;
-            }
-            if (segment == this.selection) {
-                selectNext = true;
-            }
+        const nextPoint = this.selection.to;
+        const nextSegment = this.find(segment => segment.from == nextPoint);
+        if (!nextSegment) {
+            throw new Error("wtf");
         }
-        if (selectNext) {
-            this.selection = pickFirst(this.available);
-        }
+        this.selection = nextSegment;
         this.onChange();
     }
     selectPrevious() {
-        if (this.empty) {
+        if (!this.selection) {
             return;
         }
-        let previous;
-        for (const segment of this.available) {
-            if (segment == this.selection) {
-                break;
-            }
-            previous = segment;
+        const nextPoint = this.selection.from;
+        const previousSegment = this.find(segment => segment.to == nextPoint);
+        if (!previousSegment) {
+            throw new Error("wtf");
         }
-        this.selection = previous ?? pickLast(this.available);
+        this.selection = previousSegment;
         this.onChange();
     }
 }

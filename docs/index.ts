@@ -50,6 +50,12 @@ function pickLast<T>(input: Set<T>): T | undefined {
   return result;
 }
 
+/**
+ * This is the list of segments where we could add a new shape.
+ * - Mostly this is used as a set, where you can ask for a list of all members, and you can ask if an element is still present.
+ * - Deletes are handled completely internally.  When you try to add an item, this might delete the complementary item, instead.
+ * - This is also responsible for iterating each time the user hits the next or previous button.
+ */
 class Available {
   private readonly available = new Set<Segment>();
 
@@ -111,7 +117,7 @@ class Available {
   }
 
   /**
-   * Like Array.prototype.some.
+   * Like Array.prototype.some().
    * @param predicate This will be called on each segment until one returns true.
    * @returns true if and only if the predicate returned true at least once.
    */
@@ -122,6 +128,21 @@ class Available {
       }
     }
     return false;
+  }
+
+  /**
+   * Like Array.prototype.find().
+   * @param predicate This will be called on each segment until one returns true.
+   * @returns The first segment that matches the predicate.
+   * Or undefined if nothing matched.
+   */
+  find(predicate: (segment: Segment) => boolean) {
+    for (const segment of this.available) {
+      if (predicate(segment)) {
+        return segment;
+      }
+    }
+    return;
   }
 
   /**
@@ -145,39 +166,34 @@ class Available {
   }
 
   selectNext() {
-    if (this.empty) {
+    if (!this.selection) {
+      // This list is empty!  Nothing to select.
       return;
     }
-    let selectNext = false;
-    for (const segment of this.available) {
-      if (selectNext) {
-        selectNext = false;
-        this.selection = segment;
-        break;
-      }
-      if (segment == this.selection) {
-        selectNext = true;
-      }
+    // This algorithm has a lot of issues.
+    // We are trying to go around the object in an obvious way.
+    // We are just moving one segment clockwise or counterclockwise.
+    // This will fail if the shape touches itself, even in just a single point.
+    const nextPoint = this.selection.to;
+    const nextSegment = this.find(segment => segment.from == nextPoint);
+    if (!nextSegment) {
+      throw new Error("wtf");
     }
-    if (selectNext) {
-      // The selection was the last item so we wrap around.
-      this.selection = pickFirst(this.available);
-    }
+    this.selection = nextSegment;
     this.onChange();
   }
 
   selectPrevious() {
-    if (this.empty) {
+    if (!this.selection) {
+      // This list is empty!  Nothing to select.
       return;
     }
-    let previous: Segment | undefined;
-    for (const segment of this.available) {
-      if (segment == this.selection) {
-        break;
-      }
-      previous = segment;
+    const nextPoint = this.selection.from;
+    const previousSegment = this.find(segment => segment.to == nextPoint);
+    if (!previousSegment) {
+      throw new Error("wtf");
     }
-    this.selection = previous ?? pickLast(this.available);
+    this.selection = previousSegment;
     this.onChange();
   }
 }
