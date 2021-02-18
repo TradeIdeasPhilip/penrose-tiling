@@ -71,14 +71,15 @@ class Available {
 
   private delete(segment: Segment) {
     this.available.delete(segment);
-    const nextPoint = segment.to;
-    let nextSegment = this.find(segment => segment.from == nextPoint);
-    if (!nextSegment) {
-      // This can happen in strange circumstances.
-      // Last time I was trying to fill a hole!
-      nextSegment = pickAny(this.available);
+    if (this.selection == segment) {
+      // If we deleted the currently selected item, change the selection to be the most recently added item.
+      // If you add a shape at the current selection then typically some part of the new shape is selected.
+      // If that's not possible we just pick one.
+      this.selection = pickLast(this.available);
     }
-    this.selection = nextSegment;
+    if (!this.selection) {
+      throw new Error("wtf");
+    }
   }
 
   add(toAdd: Segment | Iterable<Segment> | Shape) {
@@ -354,15 +355,5 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
-/*
-([
-  { element: addDartButton, type: "dart" },
-  { element: addKiteButton, type: "kite" },
-] as const).forEach((item) => {
-  item.element.querySelectorAll(".color-sample").forEach((sample) => {
-    if (sample instanceof HTMLElement) {
-      sample.style.backgroundColor = bodyColor[item.type];
-    }
-  });
-});
-*/
+// For the JavaScript console.
+(window as any).Index = { available, canvasAdapter }; 

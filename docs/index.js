@@ -33,12 +33,12 @@ class Available {
     }
     delete(segment) {
         this.available.delete(segment);
-        const nextPoint = segment.to;
-        let nextSegment = this.find(segment => segment.from == nextPoint);
-        if (!nextSegment) {
-            nextSegment = pickAny(this.available);
+        if (this.selection == segment) {
+            this.selection = pickLast(this.available);
         }
-        this.selection = nextSegment;
+        if (!this.selection) {
+            throw new Error("wtf");
+        }
     }
     add(toAdd) {
         if (toAdd instanceof Segment) {
@@ -265,4 +265,5 @@ document.addEventListener("keydown", (ev) => {
         }
     }
 });
+window.Index = { available, canvasAdapter };
 //# sourceMappingURL=index.js.map
