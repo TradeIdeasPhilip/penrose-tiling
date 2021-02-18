@@ -200,6 +200,10 @@ export class Segment {
     );
   }
 
+  equals(that: Segment) {
+    return this.from == that.from && this.to == that.to && this.fromDot == that.fromDot;
+  }
+
   /**
    * The dot is closest to `to`.
    */
@@ -407,10 +411,10 @@ export class Vertex {
     return [this.to, this.from];
   }
 
-  private getUnique(predicate : "long" | "short") {
+  private getUnique(predicate: "long" | "short") {
     let count = 0;
-    let result : Segment | undefined;
-    this.segments.forEach(segment => {
+    let result: Segment | undefined;
+    this.segments.forEach((segment) => {
       if (segment[predicate]) {
         result = segment;
         count++;
@@ -525,10 +529,12 @@ export class VertexGroup {
           const wantsDart = [adjacent.from.to, adjacent.to.from];
           wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
           // This next part would be optional if we did all of the forced moves first.
-          dart.forEach(dartVertex => {
-            const longSegment = dartVertex.from.long?dartVertex.from:dartVertex.to;
+          dart.forEach((dartVertex) => {
+            const longSegment = dartVertex.from.long
+              ? dartVertex.from
+              : dartVertex.to;
             longSegment.forcedMove = "dart";
-          })
+          });
         }
       } else if (kiteLong.length >= 3) {
         // This must be case C.  We must have 5 kites.
@@ -546,8 +552,8 @@ export class VertexGroup {
           );
           const wantsTwoLongKites = adjacent.every((result) => result);
           if (wantsTwoLongKites) {
-          // This must be case B.
-          dart.forEach((dartVertex) => {
+            // This must be case B.
+            dart.forEach((dartVertex) => {
               const longSegment = dartVertex.from.long
                 ? dartVertex.from
                 : dartVertex.to;
@@ -559,21 +565,21 @@ export class VertexGroup {
         } else if (kiteLong.length > 0) {
           // We have at least one kite of each type so we know this
           // is case B.
-          kiteShort[0].segments.forEach(segment => {
+          kiteShort[0].segments.forEach((segment) => {
             segment.forcedMove = "dart";
           });
-          dart.forEach(dartVertex => {
-            dartVertex.segments.forEach(segment => {
+          dart.forEach((dartVertex) => {
+            dartVertex.segments.forEach((segment) => {
               segment.forcedMove = "kite";
-            })
+            });
           });
-          kiteLong.forEach(kiteVertex => {
+          kiteLong.forEach((kiteVertex) => {
             // TODO use the kiteShort to figure out which
             // position we are in (bottom left or bottom right of
             // case B) then force both segments accordingly.
-          })
+          });
         }
-      } 
+      }
       // TODO there is another way to get to case B.
       // If all three kites are there, you know it's case B,
       // so add some darts.
@@ -657,5 +663,175 @@ export class VertexGroup {
   }
 }
 
+class LegalVertexGroup {
+  /**
+   * We sometimes want to use an angle as a key.
+   * But round off error means we might not always get an identical error.
+   * This function has a period of 2π.
+   * The way this is normally used, we call the first angle 0°.
+   * @param angle in radians.  Should be >= 0 and < 2π.
+   * @returns angle converted to degrees and rounded to an integer.
+   * This will be >= 0° and < 360°
+   */
+  public static makeKey(angle : number) : number {
+    let degrees = Math.round((angle * 180) / Math.PI) % 360;
+    if (degrees < 0) {
+      degrees += 360;
+    }
+    return degrees;
+  }
+
+  private constructor(
+    public readonly dot: boolean,
+    public readonly shapes: ReadonlyMap<number, "kite" | "dart">,
+    public readonly name: string
+  ) {
+  }
+  intersection(that: LegalVertexGroup) {
+    // assert(this.dot == that.dot)
+    const shapes = new Map<number, "kite" | "dart">();
+    this.shapes.forEach((type, degrees) => {
+      if (that.shapes.get(degrees) === type) {
+        shapes.set(degrees, type);
+      }
+    });
+    return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
+  }
+  contains(that: LegalVertexGroup) {
+    for (const entry of that.shapes) {
+      if (this.shapes.get(entry[0]) != entry[1]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  private allRotations() {
+      let result: LegalVertexGroup[] = [];
+      this.shapes.forEach((unused, degreesToRotate) => {
+        if (degreesToRotate == 0) {
+          result.push(this);
+        } else {
+          const rotatedShapes = new Map<number, "kite" | "dart">();
+          this.shapes.forEach((type, originalDegrees) => {
+            const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
+            rotatedShapes.set(newDegrees, type);
+          });
+          result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
+        }
+      });
+      return result;
+  }
+  private static make(
+    name: string,
+    dot: boolean,
+    moves: readonly ("kite" | "dart")[]
+  ) {
+      const firstSegment = Segment.create(Point.ORIGIN, dot, true, 0);
+      let segment = firstSegment;
+      const shapes = new Map<number, "kite" | "dart">();
+      // Ideally we'd use a different pool of Point objects starting here.
+      for (const type of moves) {
+        shapes.set(this.makeKey(segment.angle), type);
+        const shape = Shape.create(segment, type);
+        segment = shape.segments.find(segment => segment.to == Point.ORIGIN)!.invert();
+      }
+      if (!segment.equals(firstSegment)) {
+        throw new Error("wtf");
+      }
+      return new LegalVertexGroup(dot, shapes, name);
+  }
+  private static readonly a = ["dart", "kite", "kite", "dart"] as readonly (
+    | "kite"
+    | "dart"
+  )[];
+  private static readonly b = [
+    "kite",
+    "dart",
+    "kite",
+    "dart",
+    "kite",
+  ] as readonly ("kite" | "dart")[];
+  private static readonly c = [
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+  ] as readonly ("kite" | "dart")[];
+  private static readonly d = [
+    "dart",
+    "dart",
+    "dart",
+    "kite",
+    "kite",
+  ] as readonly ("kite" | "dart")[];
+  private static readonly e = ["kite", "dart", "kite"] as readonly (
+    | "kite"
+    | "dart"
+  )[];
+  private static readonly f = [
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+    "dart",
+  ] as readonly ("kite" | "dart")[];
+  private static readonly g = [
+    "dart",
+    "dart",
+    "dart",
+    "dart",
+    "dart",
+  ] as readonly ("kite" | "dart")[];
+
+  static readonly dot = [
+    ...LegalVertexGroup.make("A", true, LegalVertexGroup.a).allRotations(),
+    ...LegalVertexGroup.make("B", true, LegalVertexGroup.b).allRotations(),
+    LegalVertexGroup.make("C", true, LegalVertexGroup.c),
+  ] as const;
+  static readonly noDot = [
+    ...LegalVertexGroup.make("D", false, LegalVertexGroup.d).allRotations(),
+    ...LegalVertexGroup.make("E", false, LegalVertexGroup.e).allRotations(),
+    ...LegalVertexGroup.make("F", false, LegalVertexGroup.f).allRotations(),
+    LegalVertexGroup.make("G", false, LegalVertexGroup.g),
+  ] as const;
+  static find(dot: boolean) {
+    return dot ? this.dot : this.noDot;
+  }
+}
+/**
+ * The answer:
+ * makeKey() -- Converting from radians to degrees should not be automatic.
+ * It is a public static member function.
+ * we return the result in degrees, and we use degrees internally as an array key.
+ * exporting makeKey() allows the caller to use this as a key in his own data structures, so he can parse our results.
+ * this is required at the end.  We get a picture saying these are the shapes you are required to have in each position.
+ * And we have a list of the shapes that we already have, we used that as an input to get the new picture.
+ * How do we match them?  It easy because each output has a key.
+ * Before we asked for the required picture, we had to format our input to that routine.
+ * That included a call to makeKey().  So we saved a copy of the result of makeKey() and we used that as a key in a map
+ * pointing back to the original shape.  We use that map to decode the picture.
+ *
+ * We are already storing all required rotations of the allowed types.  We don't need to rotate the input.
+ * We are inspecting a recently changed vertex group.
+ * We map() over the list of currently placed vertices.
+ * We collect whatever data is required by the comparison tool.
+ * - The angle of the incoming segment, in the normal/internal/radians format.  Cached to avoid recomputing.
+ * - Space for the final angle to be filled in later.  i.e. the key.
+ * - A pointer to the vertex.  -- so we don't need anything else.
+ * We sort the array by angle.
+ * We take the smallest angle (which is almost certainly negative) and make that the offset.
+ * We want the first item in the list to be at angle 0, and rotate all the others accordingly.
+ * Use the original angle, the offset, and get() to compute the keys we fill into the list.
+ * Create a map from the key of each entry back to the entry itself.
+ * We will use that map to decode the result.
+ * Finally we need a new function to compare our input to all of the allowed patterns.
+ * - should be simple!
+ * - const possibleResults = available.filter(goodPattern => goodPattern.includes(inputList))
+ * - no possible result means that we are already past the point of no return, typically throw an exception.
+ * - take the intersection of all results, and those are the required moves, return that to the caller!
+ * Bob's your uncle.
+ */
+
 // For the JavaScript console.
-(window as any).Penrose = { Point, Segment, Shape, Vertex, VertexGroup };
+(window as any).Penrose = { Point, Segment, Shape, Vertex, VertexGroup, LegalVertexGroup };

@@ -110,6 +110,9 @@ export class Segment {
             this.fromDot == that.toDot &&
             this.long == that.long);
     }
+    equals(that) {
+        return this.from == that.from && this.to == that.to && this.fromDot == that.fromDot;
+    }
     get toDot() {
         return !this.fromDot;
     }
@@ -241,7 +244,7 @@ export class Vertex {
     getUnique(predicate) {
         let count = 0;
         let result;
-        this.segments.forEach(segment => {
+        this.segments.forEach((segment) => {
             if (segment[predicate]) {
                 result = segment;
                 count++;
@@ -319,8 +322,10 @@ export class VertexGroup {
                     }
                     const wantsDart = [adjacent.from.to, adjacent.to.from];
                     wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
-                    dart.forEach(dartVertex => {
-                        const longSegment = dartVertex.from.long ? dartVertex.from : dartVertex.to;
+                    dart.forEach((dartVertex) => {
+                        const longSegment = dartVertex.from.long
+                            ? dartVertex.from
+                            : dartVertex.to;
                         longSegment.forcedMove = "dart";
                     });
                 }
@@ -347,15 +352,15 @@ export class VertexGroup {
                     }
                 }
                 else if (kiteLong.length > 0) {
-                    kiteShort[0].segments.forEach(segment => {
+                    kiteShort[0].segments.forEach((segment) => {
                         segment.forcedMove = "dart";
                     });
-                    dart.forEach(dartVertex => {
-                        dartVertex.segments.forEach(segment => {
+                    dart.forEach((dartVertex) => {
+                        dartVertex.segments.forEach((segment) => {
                             segment.forcedMove = "kite";
                         });
                     });
-                    kiteLong.forEach(kiteVertex => {
+                    kiteLong.forEach((kiteVertex) => {
                     });
                 }
             }
@@ -398,5 +403,118 @@ export class VertexGroup {
     }
 }
 VertexGroup.all = new Map();
-window.Penrose = { Point, Segment, Shape, Vertex, VertexGroup };
+class LegalVertexGroup {
+    constructor(dot, shapes, name) {
+        this.dot = dot;
+        this.shapes = shapes;
+        this.name = name;
+    }
+    static makeKey(angle) {
+        let degrees = Math.round((angle * 180) / Math.PI) % 360;
+        if (degrees < 0) {
+            degrees += 360;
+        }
+        return degrees;
+    }
+    intersection(that) {
+        const shapes = new Map();
+        this.shapes.forEach((type, degrees) => {
+            if (that.shapes.get(degrees) === type) {
+                shapes.set(degrees, type);
+            }
+        });
+        return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
+    }
+    contains(that) {
+        for (const entry of that.shapes) {
+            if (this.shapes.get(entry[0]) != entry[1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    allRotations() {
+        let result = [];
+        this.shapes.forEach((unused, degreesToRotate) => {
+            if (degreesToRotate == 0) {
+                result.push(this);
+            }
+            else {
+                const rotatedShapes = new Map();
+                this.shapes.forEach((type, originalDegrees) => {
+                    const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
+                    rotatedShapes.set(newDegrees, type);
+                });
+                result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
+            }
+        });
+        return result;
+    }
+    static make(name, dot, moves) {
+        const firstSegment = Segment.create(Point.ORIGIN, dot, true, 0);
+        let segment = firstSegment;
+        const shapes = new Map();
+        for (const type of moves) {
+            shapes.set(this.makeKey(segment.angle), type);
+            const shape = Shape.create(segment, type);
+            segment = shape.segments.find(segment => segment.to == Point.ORIGIN).invert();
+        }
+        if (!segment.equals(firstSegment)) {
+            throw new Error("wtf");
+        }
+        return new LegalVertexGroup(dot, shapes, name);
+    }
+    static find(dot) {
+        return dot ? this.dot : this.noDot;
+    }
+}
+LegalVertexGroup.a = ["dart", "kite", "kite", "dart"];
+LegalVertexGroup.b = [
+    "kite",
+    "dart",
+    "kite",
+    "dart",
+    "kite",
+];
+LegalVertexGroup.c = [
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+];
+LegalVertexGroup.d = [
+    "dart",
+    "dart",
+    "dart",
+    "kite",
+    "kite",
+];
+LegalVertexGroup.e = ["kite", "dart", "kite"];
+LegalVertexGroup.f = [
+    "kite",
+    "kite",
+    "kite",
+    "kite",
+    "dart",
+];
+LegalVertexGroup.g = [
+    "dart",
+    "dart",
+    "dart",
+    "dart",
+    "dart",
+];
+LegalVertexGroup.dot = [
+    ...LegalVertexGroup.make("A", true, LegalVertexGroup.a).allRotations(),
+    ...LegalVertexGroup.make("B", true, LegalVertexGroup.b).allRotations(),
+    LegalVertexGroup.make("C", true, LegalVertexGroup.c),
+];
+LegalVertexGroup.noDot = [
+    ...LegalVertexGroup.make("D", false, LegalVertexGroup.d).allRotations(),
+    ...LegalVertexGroup.make("E", false, LegalVertexGroup.e).allRotations(),
+    ...LegalVertexGroup.make("F", false, LegalVertexGroup.f).allRotations(),
+    LegalVertexGroup.make("G", false, LegalVertexGroup.g),
+];
+window.Penrose = { Point, Segment, Shape, Vertex, VertexGroup, LegalVertexGroup };
 //# sourceMappingURL=penrose.js.map
