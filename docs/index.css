@@ -8,7 +8,7 @@
 }
 #canvas {
   height: 35em;
-  width : 45em;
+  width: 45em;
 }
 .splitter {
   opacity: 50%;
@@ -28,6 +28,6 @@
   border: solid;
 }
 .color-sample::after {
-  content: '.';
+  content: ".";
   opacity: 0;
 }

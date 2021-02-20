@@ -107,7 +107,7 @@ class Available {
             return;
         }
         const nextPoint = this.selection.to;
-        const nextSegment = this.find(segment => segment.from == nextPoint);
+        const nextSegment = this.find((segment) => segment.from == nextPoint);
         if (!nextSegment) {
             throw new Error("wtf");
         }
@@ -119,7 +119,7 @@ class Available {
             return;
         }
         const nextPoint = this.selection.from;
-        const previousSegment = this.find(segment => segment.to == nextPoint);
+        const previousSegment = this.find((segment) => segment.to == nextPoint);
         if (!previousSegment) {
             throw new Error("wtf");
         }

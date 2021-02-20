@@ -18,7 +18,7 @@ If two pieces overlap, we need to call that an error.
 The basic algorithm is in place!
 It's time to add some niceties.
 
-Now that the program finds *all* forced moves, I am surprised by just how many forced moves there are!
+Now that the program finds _all_ forced moves, I am surprised by just how many forced moves there are!
 
 ## References
 
@@ -32,7 +32,8 @@ I created the following picture from two sources.
 Wikipedia says these are the only 7 ways that kites and darts can share a vertex.
 I added the lavender dots to match the pictures in the handout.
 The word `dot` in the code refers to vertices that contain a lavender dot.
-![All legal vertices](AllLegalVertices.jpg) 
+![All legal vertices](AllLegalVertices.jpg)
+
 ## Tools
 
 This is a VS Code Project.
@@ -46,6 +47,7 @@ And I've added the [Live Server](https://marketplace.visualstudio.com/items?item
 ![GUI](<https://cf.geekdo-images.com/fqO5m6XXoQheQ6jaOdcpCQ__opengraph/img/NYIDA1lyP7vGPA_kyJa81R0f6JY=/fit-in/1200x630/filters:strip_icc()/pic5851096.jpg>)
 
 ### Here's a snapshot of what I have now.
+
 ![Current](./CurrentStatus.png)
 
-Or try it yourself:  https://tradeideasphilip.github.io/penrose-tiling/
+Or try it yourself: https://tradeideasphilip.github.io/penrose-tiling/

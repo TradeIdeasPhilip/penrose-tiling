@@ -137,7 +137,9 @@ export class Segment {
             this.long == that.long);
     }
     equals(that) {
-        return this.from == that.from && this.to == that.to && this.fromDot == that.fromDot;
+        return (this.from == that.from &&
+            this.to == that.to &&
+            this.fromDot == that.fromDot);
     }
     get toDot() {
         return !this.fromDot;
@@ -337,14 +339,16 @@ export class VertexGroup {
 }
 VertexGroup.all = new Map();
 function lvi_equal(a, b) {
-    if ((!a) && (!b)) {
+    if (!a && !b) {
         return true;
     }
-    else if ((!a) || (!b)) {
+    else if (!a || !b) {
         return false;
     }
     else {
-        return (a.interiorAngle == b.interiorAngle) && (a.type == b.type) && (a.fromLong == b.fromLong);
+        return (a.interiorAngle == b.interiorAngle &&
+            a.type == b.type &&
+            a.fromLong == b.fromLong);
     }
 }
 class LegalVertexGroup {
@@ -364,11 +368,11 @@ class LegalVertexGroup {
         if (currentVertices.length <= 1) {
             return;
         }
-        const minAngle = Math.min(...currentVertices.map(vertex => vertex.from.angle));
+        const minAngle = Math.min(...currentVertices.map((vertex) => vertex.from.angle));
         const inDegrees = new Map();
-        currentVertices.forEach(vertex => inDegrees.set(LegalVertexGroup.makeKey(vertex.from.angle - minAngle), vertex));
+        currentVertices.forEach((vertex) => inDegrees.set(LegalVertexGroup.makeKey(vertex.from.angle - minAngle), vertex));
         const legalVertexGroups = LegalVertexGroup.find(currentVertices[0].dot);
-        const possibleGroups = legalVertexGroups.filter(group => group.contains(inDegrees));
+        const possibleGroups = legalVertexGroups.filter((group) => group.contains(inDegrees));
         if (possibleGroups.length == 0) {
             throw new Error("We are already in an illegal position.");
         }
@@ -393,7 +397,10 @@ class LegalVertexGroup {
         });
         const center = currentVertices[0].from.from;
         const inputType = currentVertices[0].dot ? "dot" : "no dot";
-        const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
+        const input = Array.from(inDegrees.entries()).map((entry) => [
+            entry[0],
+            entry[1].type,
+        ]);
     }
     intersection(that) {
         const shapes = new Map();
@@ -402,7 +409,7 @@ class LegalVertexGroup {
                 shapes.set(degrees, vertexInfo);
             }
         });
-        return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
+        return new LegalVertexGroup(this.dot, shapes, this.name + "∩" + that.name);
     }
     contains(shapes) {
         for (const entry of shapes) {
@@ -438,7 +445,7 @@ class LegalVertexGroup {
         for (const type of moves) {
             const shape = Shape.create(segment, type);
             const fromSegment = segment;
-            const toSegment = shape.segments.find(segment => segment.to == Point.ORIGIN);
+            const toSegment = shape.segments.find((segment) => segment.to == Point.ORIGIN);
             const vertex = new Vertex(toSegment, fromSegment, shape);
             shapes.set(this.makeKey(segment.angle), vertex);
             segment = toSegment.invert();
@@ -500,5 +507,12 @@ LegalVertexGroup.noDot = [
     ...LegalVertexGroup.make("F", false, LegalVertexGroup.f).allRotations(),
     LegalVertexGroup.make("G", false, LegalVertexGroup.g),
 ];
-window.Penrose = { Point, Segment, Shape, Vertex, VertexGroup, LegalVertexGroup };
+window.Penrose = {
+    Point,
+    Segment,
+    Shape,
+    Vertex,
+    VertexGroup,
+    LegalVertexGroup,
+};
 //# sourceMappingURL=penrose.js.map

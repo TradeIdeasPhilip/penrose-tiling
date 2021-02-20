@@ -96,9 +96,9 @@ export class CanvasAdapter {
    * @param point The center of the circle.
    * @param radius The radius of the circle.
    */
-  addCircle(point : Point, radius : number) {
+  addCircle(point: Point, radius: number) {
     const { x, y } = this.intoCanvasSpace(point);
-    this.context.arc(x, y, radius, 0, 2*Math.PI);
+    this.context.arc(x, y, radius, 0, 2 * Math.PI);
   }
 
   /**
@@ -109,10 +109,14 @@ export class CanvasAdapter {
    * @param radius The radius of the circle.
    * @param fillStyle Typically an HTML color, but anything that works for CanvasRenderingContext2D.fillStyle.
    */
-  drawCircle(point : Point, radius : number, fillStyle : string | CanvasGradient | CanvasPattern) {
+  drawCircle(
+    point: Point,
+    radius: number,
+    fillStyle: string | CanvasGradient | CanvasPattern
+  ) {
     const { x, y } = this.intoCanvasSpace(point);
     const context = this.context;
-    context.beginPath()
+    context.beginPath();
     context.fillStyle = fillStyle;
     this.addCircle(point, radius);
     context.fill();
@@ -124,7 +128,7 @@ export class CanvasAdapter {
    * @param color Standard HTML colors.
    * @param width In canvas units.
    */
-  drawSegments(segments : Segment | Segment[], color = "orange", width = 12) {
+  drawSegments(segments: Segment | Segment[], color = "orange", width = 12) {
     if (segments instanceof Segment) {
       segments = [segments];
     }
@@ -250,7 +254,11 @@ export class Segment {
   }
 
   equals(that: Segment) {
-    return this.from == that.from && this.to == that.to && this.fromDot == that.fromDot;
+    return (
+      this.from == that.from &&
+      this.to == that.to &&
+      this.fromDot == that.fromDot
+    );
   }
 
   /**
@@ -280,7 +288,7 @@ export class Segment {
    * 0 means the segment is going directly to the right.
    * Adding a small positive number to the angle means rotating a small amount counterclockwise.
    * We measure in radians, i.e. `2*Math.PI` is a complete circle.
-   * 
+   *
    * If you want to compare two angles, consider using LegalVertexGroup.makeKey().
    * That takes care of round off error and other ambiguities.
    */
@@ -477,7 +485,9 @@ export class Vertex {
    * This will return exactly the numbers you typically see for these angle, e.g. https://en.wikipedia.org/wiki/Penrose_tiling#/media/File:Kite_Dart.svg
    */
   get interiorAngle() {
-    return LegalVertexGroup.makeKey(Math.PI - (this.from.angle - this.to.angle));
+    return LegalVertexGroup.makeKey(
+      Math.PI - (this.from.angle - this.to.angle)
+    );
   }
 
   /**
@@ -579,25 +589,35 @@ export class VertexGroup {
  * fromLong means that the segment coming from this vertex is long.
  * We start from a Vertex object, but we only care about the parts that don't change when we rotate or move the shape.
  */
-type LegalVertexInfo = {readonly interiorAngle : number, readonly type : "kite" | "dart", readonly fromLong : boolean};
-function lvi_equal(a : LegalVertexInfo | undefined, b : LegalVertexInfo | undefined) {
-  if ((!a) && (!b)) {
+type LegalVertexInfo = {
+  readonly interiorAngle: number;
+  readonly type: "kite" | "dart";
+  readonly fromLong: boolean;
+};
+function lvi_equal(
+  a: LegalVertexInfo | undefined,
+  b: LegalVertexInfo | undefined
+) {
+  if (!a && !b) {
     return true;
-  } else if ((!a) || (!b)) {
+  } else if (!a || !b) {
     return false;
   } else {
-    return (a.interiorAngle == b.interiorAngle) && (a.type == b.type) && (a.fromLong == b.fromLong);
+    return (
+      a.interiorAngle == b.interiorAngle &&
+      a.type == b.type &&
+      a.fromLong == b.fromLong
+    );
   }
 }
 
 class LegalVertexGroup {
-
   /**
    * We sometimes want to use an angle as a key.
    * But round off error means we might not always get an identical value.
    *
    * This function has a period of 2π.
-   * 
+   *
    * The way this is normally used, we call the first angle 0°.
    * If one angle is actually 1.49999° (initially expressed in radians) and a second
    * angle is 1.500001°, and you put both numbers into here, you'll get
@@ -609,7 +629,7 @@ class LegalVertexGroup {
    * @returns angle converted to degrees and rounded to an integer.
    * This will be >= 0° and < 360°
    */
-  public static makeKey(angle : number) : number {
+  public static makeKey(angle: number): number {
     let degrees = Math.round((angle * 180) / Math.PI) % 360;
     if (degrees < 0) {
       degrees += 360;
@@ -617,7 +637,7 @@ class LegalVertexGroup {
     return degrees;
   }
 
-  public static checkForForce(currentVertices : ReadonlyArray<Vertex>) {
+  public static checkForForce(currentVertices: ReadonlyArray<Vertex>) {
     if (currentVertices.length <= 1) {
       // This is an optimization.  There is only one case where we know
       // about a force from a single shape.  That's case E from
@@ -625,11 +645,20 @@ class LegalVertexGroup {
       // so we don't need to worry about it here.
       return;
     }
-    const minAngle = Math.min(...currentVertices.map(vertex => vertex.from.angle));
+    const minAngle = Math.min(
+      ...currentVertices.map((vertex) => vertex.from.angle)
+    );
     const inDegrees = new Map<number, Vertex>();
-    currentVertices.forEach(vertex => inDegrees.set(LegalVertexGroup.makeKey(vertex.from.angle - minAngle), vertex));
+    currentVertices.forEach((vertex) =>
+      inDegrees.set(
+        LegalVertexGroup.makeKey(vertex.from.angle - minAngle),
+        vertex
+      )
+    );
     const legalVertexGroups = LegalVertexGroup.find(currentVertices[0].dot);
-    const possibleGroups = legalVertexGroups.filter(group => group.contains(inDegrees));
+    const possibleGroups = legalVertexGroups.filter((group) =>
+      group.contains(inDegrees)
+    );
     if (possibleGroups.length == 0) {
       throw new Error("We are already in an illegal position.");
     }
@@ -638,7 +667,8 @@ class LegalVertexGroup {
       if (!inDegrees.has(degrees)) {
         // This shape is required but not yet present.
         // Look for its neighbors so we can tag them with the correct forcedMove.
-        const nextShapeDegrees = (degrees + legalVertexInfo.interiorAngle) % 360;
+        const nextShapeDegrees =
+          (degrees + legalVertexInfo.interiorAngle) % 360;
         const nextShape = inDegrees.get(nextShapeDegrees);
         if (nextShape) {
           nextShape.from.forcedMove = legalVertexInfo.type;
@@ -655,8 +685,11 @@ class LegalVertexGroup {
       }
     });
     const center = currentVertices[0].from.from;
-    const inputType = currentVertices[0].dot?"dot":"no dot";
-    const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
+    const inputType = currentVertices[0].dot ? "dot" : "no dot";
+    const input = Array.from(inDegrees.entries()).map((entry) => [
+      entry[0],
+      entry[1].type,
+    ]);
     //console.log("checkForForce()", { center, inputType, input, requirements });
   }
 
@@ -664,8 +697,7 @@ class LegalVertexGroup {
     public readonly dot: boolean,
     public readonly shapes: ReadonlyMap<number, LegalVertexInfo>,
     public readonly name: string
-  ) {
-  }
+  ) {}
   intersection(that: LegalVertexGroup) {
     // assert(this.dot == that.dot)
     const shapes = new Map<number, LegalVertexInfo>();
@@ -674,7 +706,7 @@ class LegalVertexGroup {
         shapes.set(degrees, vertexInfo);
       }
     });
-    return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
+    return new LegalVertexGroup(this.dot, shapes, this.name + "∩" + that.name);
   }
   contains(shapes: ReadonlyMap<number, Vertex>) {
     // Check each shape in the input against shapes in this LegalVertexInfo.
@@ -691,49 +723,51 @@ class LegalVertexGroup {
     return true;
   }
   private allRotations() {
-      let result: LegalVertexGroup[] = [];
-      this.shapes.forEach((unused, degreesToRotate) => {
-        if (degreesToRotate == 0) {
-          result.push(this);
-        } else {
-          const rotatedShapes = new Map<number, LegalVertexInfo>();
-          this.shapes.forEach((vertexInfo, originalDegrees) => {
-            const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
-            rotatedShapes.set(newDegrees, vertexInfo);
-          });
-          result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
-        }
-      });
-      return result;
+    let result: LegalVertexGroup[] = [];
+    this.shapes.forEach((unused, degreesToRotate) => {
+      if (degreesToRotate == 0) {
+        result.push(this);
+      } else {
+        const rotatedShapes = new Map<number, LegalVertexInfo>();
+        this.shapes.forEach((vertexInfo, originalDegrees) => {
+          const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
+          rotatedShapes.set(newDegrees, vertexInfo);
+        });
+        result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
+      }
+    });
+    return result;
   }
   private static make(
     name: string,
     dot: boolean,
     moves: readonly ("kite" | "dart")[]
   ) {
-      const firstSegment = Segment.create(Point.ORIGIN, dot, true, 0);
-      let segment = firstSegment;
-      const shapes = new Map<number, LegalVertexInfo>();
-      // Ideally we'd use a different pool of Point objects starting here.
-      for (const type of moves) {
-        const shape = Shape.create(segment, type);
-        const fromSegment = segment;
-        const toSegment = shape.segments.find(segment => segment.to == Point.ORIGIN)!;
-        const vertex = new Vertex(toSegment, fromSegment, shape);
-        shapes.set(this.makeKey(segment.angle), vertex);
-        segment = toSegment.invert();
-      }
-      if (!segment.equals(firstSegment)) {
-        throw new Error("wtf");
-      }
-      return new LegalVertexGroup(dot, shapes, name);
+    const firstSegment = Segment.create(Point.ORIGIN, dot, true, 0);
+    let segment = firstSegment;
+    const shapes = new Map<number, LegalVertexInfo>();
+    // Ideally we'd use a different pool of Point objects starting here.
+    for (const type of moves) {
+      const shape = Shape.create(segment, type);
+      const fromSegment = segment;
+      const toSegment = shape.segments.find(
+        (segment) => segment.to == Point.ORIGIN
+      )!;
+      const vertex = new Vertex(toSegment, fromSegment, shape);
+      shapes.set(this.makeKey(segment.angle), vertex);
+      segment = toSegment.invert();
+    }
+    if (!segment.equals(firstSegment)) {
+      throw new Error("wtf");
+    }
+    return new LegalVertexGroup(dot, shapes, name);
   }
   // See AllLegalVertices.jpg for a list of all legal moves.
   // There are exactly 7 legal ways that kites and darts can meet at a common vertex.
   // I've assigned letters to match the pictures to the comments.
   private static readonly a = ["dart", "kite", "kite", "dart"] as readonly (
-  | "kite"
-  | "dart"
+    | "kite"
+    | "dart"
   )[];
   private static readonly b = [
     "kite",
@@ -825,4 +859,11 @@ class LegalVertexGroup {
  */
 
 // For the JavaScript console.
-(window as any).Penrose = { Point, Segment, Shape, Vertex, VertexGroup, LegalVertexGroup };
+(window as any).Penrose = {
+  Point,
+  Segment,
+  Shape,
+  Vertex,
+  VertexGroup,
+  LegalVertexGroup,
+};

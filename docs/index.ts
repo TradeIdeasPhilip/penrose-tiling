@@ -181,7 +181,7 @@ class Available {
     // We are just moving one segment clockwise or counterclockwise.
     // This will fail if the shape touches itself, even in just a single point.
     const nextPoint = this.selection.to;
-    const nextSegment = this.find(segment => segment.from == nextPoint);
+    const nextSegment = this.find((segment) => segment.from == nextPoint);
     if (!nextSegment) {
       throw new Error("wtf");
     }
@@ -195,7 +195,7 @@ class Available {
       return;
     }
     const nextPoint = this.selection.from;
-    const previousSegment = this.find(segment => segment.to == nextPoint);
+    const previousSegment = this.find((segment) => segment.to == nextPoint);
     if (!previousSegment) {
       throw new Error("wtf");
     }
@@ -248,7 +248,7 @@ function updateGuiToMatchAvailable() {
     if (!selectedSegment) {
       throw new Error("wtf");
     }
-    context.setLineDash([innerLineWidth, innerLineWidth*2.1]);
+    context.setLineDash([innerLineWidth, innerLineWidth * 2.1]);
     draw("yellow", [selectedSegment]);
     context.setLineDash([]);
     addDartButton.disabled = selectedSegment.forcedMove == "kite";
@@ -349,4 +349,4 @@ document.addEventListener("keydown", (ev) => {
 });
 
 // For the JavaScript console.
-(window as any).Index = { available, canvasAdapter }; 
+(window as any).Index = { available, canvasAdapter };
