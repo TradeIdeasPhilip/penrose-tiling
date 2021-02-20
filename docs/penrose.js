@@ -62,6 +62,20 @@ export class CanvasAdapter {
         this.addCircle(point, radius);
         context.fill();
     }
+    drawSegments(segments, color = "orange", width = 12) {
+        if (segments instanceof Segment) {
+            segments = [segments];
+        }
+        const context = this.context;
+        context.strokeStyle = color;
+        context.lineWidth = width;
+        context.lineCap = "round";
+        context.beginPath();
+        for (const segment of segments) {
+            this.addToPath(segment);
+        }
+        context.stroke();
+    }
     makeBitmapMatchElement() {
         const canvas = this.canvas;
         const style = canvas.style;
@@ -254,7 +268,10 @@ export class Vertex {
         return [this.to, this.from];
     }
     get interiorAngle() {
-        return LegalVertexGroup.makeKey(Math.PI - (this.to.angle - this.from.angle));
+        return LegalVertexGroup.makeKey(Math.PI - (this.from.angle - this.to.angle));
+    }
+    get fromLong() {
+        return this.from.long;
     }
     getUnique(predicate) {
         let count = 0;
@@ -327,7 +344,7 @@ function lvi_equal(a, b) {
         return false;
     }
     else {
-        return (a.interiorAngle == b.interiorAngle) && (a.type == b.type);
+        return (a.interiorAngle == b.interiorAngle) && (a.type == b.type) && (a.fromLong == b.fromLong);
     }
 }
 class LegalVertexGroup {
@@ -356,10 +373,27 @@ class LegalVertexGroup {
             throw new Error("We are already in an illegal position.");
         }
         const requirements = possibleGroups.reduce((g1, g2) => g1.intersection(g2));
+        requirements.shapes.forEach((legalVertexInfo, degrees) => {
+            if (!inDegrees.has(degrees)) {
+                const nextShapeDegrees = (degrees + legalVertexInfo.interiorAngle) % 360;
+                const nextShape = inDegrees.get(nextShapeDegrees);
+                if (nextShape) {
+                    nextShape.from.forcedMove = legalVertexInfo.type;
+                }
+                for (const fromCurrent of inDegrees) {
+                    const currentAngle = fromCurrent[0];
+                    const currentVertex = fromCurrent[1];
+                    const nextAngle = currentAngle + currentVertex.interiorAngle;
+                    if (nextAngle == degrees) {
+                        currentVertex.to.forcedMove = legalVertexInfo.type;
+                        break;
+                    }
+                }
+            }
+        });
         const center = currentVertices[0].from.from;
         const inputType = currentVertices[0].dot ? "dot" : "no dot";
         const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
-        console.log("checkForForce()", { center, inputType, input, requirements });
     }
     intersection(that) {
         const shapes = new Map();

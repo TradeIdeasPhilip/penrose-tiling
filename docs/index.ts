@@ -239,14 +239,7 @@ function updateGuiToMatchAvailable() {
       byColor[type].push(segment);
     }
     function draw(color: string, segments: Segment[]) {
-      context.beginPath();
-      context.strokeStyle = color;
-      context.lineWidth = innerLineWidth;
-      context.lineCap = "round";
-      for (const segment of segments) {
-        canvasAdapter.addToPath(segment);
-      }
-      context.stroke();
+      canvasAdapter.drawSegments(segments, color, innerLineWidth);
     }
     draw("darkkhaki", byColor.available);
     draw(bodyColor.kite, byColor.forceKite);

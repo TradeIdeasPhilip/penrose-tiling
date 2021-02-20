@@ -15,11 +15,10 @@ If two pieces overlap, we need to call that an error.
 
 ## Status
 
-I'm just barely getting started.
-I'm playing around with some types and functions to try to work out the shape of this thing.
-The picture in my head is vague.
+The basic algorithm is in place!
+It's time to add some niceties.
 
-Seriously, GitHub is just a backup.
+Now that the program finds *all* forced moves, I am surprised by just how many forced moves there are!
 
 ## References
 

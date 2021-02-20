@@ -119,6 +119,27 @@ export class CanvasAdapter {
   }
 
   /**
+   * Draw the given segments with in the given color and width.
+   * @param segments The segment or segments to draw.
+   * @param color Standard HTML colors.
+   * @param width In canvas units.
+   */
+  drawSegments(segments : Segment | Segment[], color = "orange", width = 12) {
+    if (segments instanceof Segment) {
+      segments = [segments];
+    }
+    const context = this.context;
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.lineCap = "round";
+    context.beginPath();
+    for (const segment of segments) {
+      this.addToPath(segment);
+    }
+    context.stroke();
+  }
+
+  /**
    * Set the number of pixels in the bitmap backing the canvas to match the number of pixels shown on the screen.
    * That used to be the default.
    * Now web browsers are likely to lie about the number of pixels by default, so old web pages are easier to read on 4k monitors.
@@ -456,7 +477,14 @@ export class Vertex {
    * This will return exactly the numbers you typically see for these angle, e.g. https://en.wikipedia.org/wiki/Penrose_tiling#/media/File:Kite_Dart.svg
    */
   get interiorAngle() {
-    return LegalVertexGroup.makeKey(Math.PI - (this.to.angle - this.from.angle));
+    return LegalVertexGroup.makeKey(Math.PI - (this.from.angle - this.to.angle));
+  }
+
+  /**
+   * This is used by the LegalVertexInfo type.
+   */
+  get fromLong() {
+    return this.from.long;
   }
 
   private getUnique(predicate: "long" | "short") {
@@ -548,16 +576,17 @@ export class VertexGroup {
 /**
  * This is how we represent the allowed shapes inside LegalVertexGroup.
  * The interiorAngle is measured in degrees.
+ * fromLong means that the segment coming from this vertex is long.
  * We start from a Vertex object, but we only care about the parts that don't change when we rotate or move the shape.
  */
-type LegalVertexInfo = {readonly interiorAngle : number, type : "kite" | "dart"};
+type LegalVertexInfo = {readonly interiorAngle : number, readonly type : "kite" | "dart", readonly fromLong : boolean};
 function lvi_equal(a : LegalVertexInfo | undefined, b : LegalVertexInfo | undefined) {
   if ((!a) && (!b)) {
     return true;
   } else if ((!a) || (!b)) {
     return false;
   } else {
-    return (a.interiorAngle == b.interiorAngle) && (a.type == b.type);
+    return (a.interiorAngle == b.interiorAngle) && (a.type == b.type) && (a.fromLong == b.fromLong);
   }
 }
 
@@ -605,10 +634,30 @@ class LegalVertexGroup {
       throw new Error("We are already in an illegal position.");
     }
     const requirements = possibleGroups.reduce((g1, g2) => g1.intersection(g2));
+    requirements.shapes.forEach((legalVertexInfo, degrees) => {
+      if (!inDegrees.has(degrees)) {
+        // This shape is required but not yet present.
+        // Look for its neighbors so we can tag them with the correct forcedMove.
+        const nextShapeDegrees = (degrees + legalVertexInfo.interiorAngle) % 360;
+        const nextShape = inDegrees.get(nextShapeDegrees);
+        if (nextShape) {
+          nextShape.from.forcedMove = legalVertexInfo.type;
+        }
+        for (const fromCurrent of inDegrees) {
+          const currentAngle = fromCurrent[0];
+          const currentVertex = fromCurrent[1];
+          const nextAngle = currentAngle + currentVertex.interiorAngle;
+          if (nextAngle == degrees) {
+            currentVertex.to.forcedMove = legalVertexInfo.type;
+            break;
+          }
+        }
+      }
+    });
     const center = currentVertices[0].from.from;
     const inputType = currentVertices[0].dot?"dot":"no dot";
     const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
-    console.log("checkForForce()", { center, inputType, input, requirements });
+    //console.log("checkForForce()", { center, inputType, input, requirements });
   }
 
   private constructor(
