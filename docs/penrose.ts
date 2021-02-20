@@ -91,6 +91,34 @@ export class CanvasAdapter {
   }
 
   /**
+   * Add a circle to the current path.
+   * Aimed at debugging.
+   * @param point The center of the circle.
+   * @param radius The radius of the circle.
+   */
+  addCircle(point : Point, radius : number) {
+    const { x, y } = this.intoCanvasSpace(point);
+    this.context.arc(x, y, radius, 0, 2*Math.PI);
+  }
+
+  /**
+   * Draws a circle and fills it in.
+   * The path of the circle is left in the canvas, in case you want to draw a border.
+   * Aimed at debugging.
+   * @param point The center of the circle.
+   * @param radius The radius of the circle.
+   * @param fillStyle Typically an HTML color, but anything that works for CanvasRenderingContext2D.fillStyle.
+   */
+  drawCircle(point : Point, radius : number, fillStyle : string | CanvasGradient | CanvasPattern) {
+    const { x, y } = this.intoCanvasSpace(point);
+    const context = this.context;
+    context.beginPath()
+    context.fillStyle = fillStyle;
+    this.addCircle(point, radius);
+    context.fill();
+  }
+
+  /**
    * Set the number of pixels in the bitmap backing the canvas to match the number of pixels shown on the screen.
    * That used to be the default.
    * Now web browsers are likely to lie about the number of pixels by default, so old web pages are easier to read on 4k monitors.
@@ -226,6 +254,15 @@ export class Segment {
     return new Segment(this.to, this.from, this.toDot, this.long);
   }
 
+  /**
+   * The angle of this segment.  We measure it like in math class:
+   * 0 means the segment is going directly to the right.
+   * Adding a small positive number to the angle means rotating a small amount counterclockwise.
+   * We measure in radians, i.e. `2*Math.PI` is a complete circle.
+   * 
+   * If you want to compare two angles, consider using LegalVertexGroup.makeKey().
+   * That takes care of round off error and other ambiguities.
+   */
   get angle() {
     // Warning:  y for the canvas is positive down.  Everywhere else we've been
     // using the convention that y is positive up.
@@ -411,6 +448,17 @@ export class Vertex {
     return [this.to, this.from];
   }
 
+  /**
+   * This measures the angle between the segment going into this point and the segment leaving this point.
+   * This would not change if you rotated the entire shape.
+   * This is measured in degrees, as in LegalVertexGroup.makeKey(), so you can use == to compare two results.
+   * This will be less than 180° for a convex angle, including all four corners of a kite and 3 corners of a dart.
+   * This will return exactly the numbers you typically see for these angle, e.g. https://en.wikipedia.org/wiki/Penrose_tiling#/media/File:Kite_Dart.svg
+   */
+  get interiorAngle() {
+    return LegalVertexGroup.makeKey(Math.PI - (this.to.angle - this.from.angle));
+  }
+
   private getUnique(predicate: "long" | "short") {
     let count = 0;
     let result: Segment | undefined;
@@ -480,173 +528,7 @@ export class VertexGroup {
 
   private addVertex(vertex: Vertex) {
     this.vertices.push(vertex);
-    this.checkForForce();
-  }
-
-  private checkForForce() {
-    // See AllLegalVertices.jpg for a list of all legal moves.
-    // There are exactly 7 legal ways that kites and darts can meet at a common vertex.
-    // I've assigned letters to match the pictures to the comments.
-    if (this.dot) {
-      // This is A, B, or C in our picture.
-
-      /**
-       * Kites with the pointier side touching the common point.
-       * I.e. kites with the longer segments touching the common point.
-       */
-      const kiteLong: Vertex[] = [];
-
-      /**
-       * Kites with the flatter side touching the common point.
-       * I.e. kites with the shorter segments touching the common point.
-       */
-      const kiteShort: Vertex[] = [];
-
-      /**
-       * All darts touching the common point.
-       */
-      const dart: Vertex[] = [];
-
-      this.vertices.forEach((vertex) => {
-        if (vertex.type == "dart") {
-          dart.push(vertex);
-        } else {
-          if (vertex.to.short) {
-            kiteShort.push(vertex);
-          } else {
-            kiteLong.push(vertex);
-          }
-        }
-      });
-
-      if (kiteShort.length == 2) {
-        // This must be case A.  We must have 2 darts.
-        if (dart.length < 2) {
-          const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
-          if (!adjacent) {
-            throw new Error("wtf");
-          }
-          const wantsDart = [adjacent.from.to, adjacent.to.from];
-          wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
-          // This next part would be optional if we did all of the forced moves first.
-          dart.forEach((dartVertex) => {
-            const longSegment = dartVertex.from.long
-              ? dartVertex.from
-              : dartVertex.to;
-            longSegment.forcedMove = "dart";
-          });
-        }
-      } else if (kiteLong.length >= 3) {
-        // This must be case C.  We must have 5 kites.
-        if (kiteLong.length < 5) {
-          kiteLong.forEach((vertex) => {
-            vertex.to.forcedMove = "kite";
-            vertex.from.forcedMove = "kite";
-          });
-        }
-      } else if (kiteShort.length == 1) {
-        // This must be case A or B.
-        if (dart.length == 2 && kiteLong.length < 2) {
-          const adjacent = dart.map((dartVertex) =>
-            dartVertex.isAdjacentTo(kiteShort[0])
-          );
-          const wantsTwoLongKites = adjacent.every((result) => result);
-          if (wantsTwoLongKites) {
-            // This must be case B.
-            dart.forEach((dartVertex) => {
-              const longSegment = dartVertex.from.long
-                ? dartVertex.from
-                : dartVertex.to;
-              longSegment.forcedMove = "kite";
-            });
-          }
-          // TODO if there is example one kiteLong, then mark it
-          // so the open side is another kite long.
-        } else if (kiteLong.length > 0) {
-          // We have at least one kite of each type so we know this
-          // is case B.
-          kiteShort[0].segments.forEach((segment) => {
-            segment.forcedMove = "dart";
-          });
-          dart.forEach((dartVertex) => {
-            dartVertex.segments.forEach((segment) => {
-              segment.forcedMove = "kite";
-            });
-          });
-          kiteLong.forEach((kiteVertex) => {
-            // TODO use the kiteShort to figure out which
-            // position we are in (bottom left or bottom right of
-            // case B) then force both segments accordingly.
-          });
-        }
-      }
-      // TODO there is another way to get to case B.
-      // If all three kites are there, you know it's case B,
-      // so add some darts.
-      // What if there were just two darts and they were not
-      // adjacent?  That is also definitely B.  If you hit
-      // "Do forced moves" you'll get to there eventually, but
-      // we want to mark the long sides of the darts immediately.
-    } else {
-      // No dot.  This must match D, E, F, or G in the picture.
-
-      /**
-       * All kites meeting at this common point.
-       */
-      const kite: Vertex[] = [];
-
-      /**
-       * All darts pointing toward this common point.
-       * Figures D, E, F, and G have 3, 0, 1, and 5 of these, respectively.
-       */
-      const dartIn: Vertex[] = [];
-
-      /**
-       * All darts pointing away from this common point.
-       * Figures D, E, F, and G have 0, 1, 0, and 0 of these, respectively.
-       */
-      const dartOut: Vertex[] = [];
-
-      this.vertices.forEach((vertex) => {
-        if (vertex.type == "dart") {
-          if (vertex.to.long) {
-            dartIn.push(vertex);
-          } else {
-            dartOut.push(vertex);
-          }
-        } else {
-          kite.push(vertex);
-        }
-      });
-
-      if (dartOut.length == 1) {
-        // Case E.
-        // The dart is already annotated correctly by Shape.createDart().
-        // It's tempting to move that code here for consistency.
-        if (kite.length == 1) {
-          // We need a second kite.
-          kite[0].long.forcedMove = "kite";
-        }
-      } else if (dartIn.length == 4) {
-        // This must be case G.  We must have 5 darts.
-        this.vertices.forEach((vertex) => {
-          vertex.to.forcedMove = "dart";
-          vertex.from.forcedMove = "dart";
-        });
-      }
-      // TODO:
-      // If exactly 2 kites and exactly 2 darts, case D, add one more dart.
-      // If exactly 2 kites and exactly 1 dart, and the dart is not adjacent to either kite, case D, add two more darts.
-      // If 3 or 4 kites, case F, total 4 kites and 1 dart.
-      // If exactly 2 kites and they are not adjacent, case F.
-      //   If the dart is already in place, just fill in the two missing kites.
-      //   Otherwise the dart will be touching at least on of the existing, but we have to figure out which of the four kite segments to start from.
-      // If exactly 3 darts, and one is not adjacent to either of the other two, then case G.
-      // Case E is definitely as good as it can be!
-      // The others deserve a closer look.
-      //   There can be strange cases,
-      //   especially when the pieces are coming from two different directions.
-    }
+    LegalVertexGroup.checkForForce(this.vertices);
   }
 
   /**
@@ -663,13 +545,38 @@ export class VertexGroup {
   }
 }
 
+/**
+ * This is how we represent the allowed shapes inside LegalVertexGroup.
+ * The interiorAngle is measured in degrees.
+ * We start from a Vertex object, but we only care about the parts that don't change when we rotate or move the shape.
+ */
+type LegalVertexInfo = {readonly interiorAngle : number, type : "kite" | "dart"};
+function lvi_equal(a : LegalVertexInfo | undefined, b : LegalVertexInfo | undefined) {
+  if ((!a) && (!b)) {
+    return true;
+  } else if ((!a) || (!b)) {
+    return false;
+  } else {
+    return (a.interiorAngle == b.interiorAngle) && (a.type == b.type);
+  }
+}
+
 class LegalVertexGroup {
+
   /**
    * We sometimes want to use an angle as a key.
-   * But round off error means we might not always get an identical error.
+   * But round off error means we might not always get an identical value.
+   *
    * This function has a period of 2π.
+   * 
    * The way this is normally used, we call the first angle 0°.
-   * @param angle in radians.  Should be >= 0 and < 2π.
+   * If one angle is actually 1.49999° (initially expressed in radians) and a second
+   * angle is 1.500001°, and you put both numbers into here, you'll get
+   * 1° and 2° as the two results.  If you compare those two results using ==, the
+   * result will be false, which is probably not what you wanted.  On the other
+   * hand, if you subtract 1.49999° from both angles before the conversion, they
+   * will both return 0°.
+   * @param angle in radians.
    * @returns angle converted to degrees and rounded to an integer.
    * This will be >= 0° and < 360°
    */
@@ -681,25 +588,54 @@ class LegalVertexGroup {
     return degrees;
   }
 
+  public static checkForForce(currentVertices : ReadonlyArray<Vertex>) {
+    if (currentVertices.length <= 1) {
+      // This is an optimization.  There is only one case where we know
+      // about a force from a single shape.  That's case E from
+      // AllLegalVertices.jpg.  That case gets covered in Shape.createDart(),
+      // so we don't need to worry about it here.
+      return;
+    }
+    const minAngle = Math.min(...currentVertices.map(vertex => vertex.from.angle));
+    const inDegrees = new Map<number, Vertex>();
+    currentVertices.forEach(vertex => inDegrees.set(LegalVertexGroup.makeKey(vertex.from.angle - minAngle), vertex));
+    const legalVertexGroups = LegalVertexGroup.find(currentVertices[0].dot);
+    const possibleGroups = legalVertexGroups.filter(group => group.contains(inDegrees));
+    if (possibleGroups.length == 0) {
+      throw new Error("We are already in an illegal position.");
+    }
+    const requirements = possibleGroups.reduce((g1, g2) => g1.intersection(g2));
+    const center = currentVertices[0].from.from;
+    const inputType = currentVertices[0].dot?"dot":"no dot";
+    const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
+    console.log("checkForForce()", { center, inputType, input, requirements });
+  }
+
   private constructor(
     public readonly dot: boolean,
-    public readonly shapes: ReadonlyMap<number, "kite" | "dart">,
+    public readonly shapes: ReadonlyMap<number, LegalVertexInfo>,
     public readonly name: string
   ) {
   }
   intersection(that: LegalVertexGroup) {
     // assert(this.dot == that.dot)
-    const shapes = new Map<number, "kite" | "dart">();
-    this.shapes.forEach((type, degrees) => {
-      if (that.shapes.get(degrees) === type) {
-        shapes.set(degrees, type);
+    const shapes = new Map<number, LegalVertexInfo>();
+    this.shapes.forEach((vertexInfo, degrees) => {
+      if (lvi_equal(that.shapes.get(degrees), vertexInfo)) {
+        shapes.set(degrees, vertexInfo);
       }
     });
     return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
   }
-  contains(that: LegalVertexGroup) {
-    for (const entry of that.shapes) {
-      if (this.shapes.get(entry[0]) != entry[1]) {
+  contains(shapes: ReadonlyMap<number, Vertex>) {
+    // Check each shape in the input against shapes in this LegalVertexInfo.
+    for (const entry of shapes) {
+      const fromThis = this.shapes.get(entry[0]);
+      const fromShapes = entry[1];
+      if (!lvi_equal(fromThis, fromShapes)) {
+        // We could not find a corresponding piece,
+        // or two pieces lined up but they are different pieces,
+        // or the same piece in different orientations.
         return false;
       }
     }
@@ -711,10 +647,10 @@ class LegalVertexGroup {
         if (degreesToRotate == 0) {
           result.push(this);
         } else {
-          const rotatedShapes = new Map<number, "kite" | "dart">();
-          this.shapes.forEach((type, originalDegrees) => {
+          const rotatedShapes = new Map<number, LegalVertexInfo>();
+          this.shapes.forEach((vertexInfo, originalDegrees) => {
             const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
-            rotatedShapes.set(newDegrees, type);
+            rotatedShapes.set(newDegrees, vertexInfo);
           });
           result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
         }
@@ -728,21 +664,27 @@ class LegalVertexGroup {
   ) {
       const firstSegment = Segment.create(Point.ORIGIN, dot, true, 0);
       let segment = firstSegment;
-      const shapes = new Map<number, "kite" | "dart">();
+      const shapes = new Map<number, LegalVertexInfo>();
       // Ideally we'd use a different pool of Point objects starting here.
       for (const type of moves) {
-        shapes.set(this.makeKey(segment.angle), type);
         const shape = Shape.create(segment, type);
-        segment = shape.segments.find(segment => segment.to == Point.ORIGIN)!.invert();
+        const fromSegment = segment;
+        const toSegment = shape.segments.find(segment => segment.to == Point.ORIGIN)!;
+        const vertex = new Vertex(toSegment, fromSegment, shape);
+        shapes.set(this.makeKey(segment.angle), vertex);
+        segment = toSegment.invert();
       }
       if (!segment.equals(firstSegment)) {
         throw new Error("wtf");
       }
       return new LegalVertexGroup(dot, shapes, name);
   }
+  // See AllLegalVertices.jpg for a list of all legal moves.
+  // There are exactly 7 legal ways that kites and darts can meet at a common vertex.
+  // I've assigned letters to match the pictures to the comments.
   private static readonly a = ["dart", "kite", "kite", "dart"] as readonly (
-    | "kite"
-    | "dart"
+  | "kite"
+  | "dart"
   )[];
   private static readonly b = [
     "kite",
@@ -816,7 +758,7 @@ class LegalVertexGroup {
  * We are inspecting a recently changed vertex group.
  * We map() over the list of currently placed vertices.
  * We collect whatever data is required by the comparison tool.
- * - The angle of the incoming segment, in the normal/internal/radians format.  Cached to avoid recomputing.
+ * - The angle of the segment coming from the vertex, in the normal/internal/radians format.  Cached to avoid recomputing.
  * - Space for the final angle to be filled in later.  i.e. the key.
  * - A pointer to the vertex.  -- so we don't need anything else.
  * We sort the array by angle.

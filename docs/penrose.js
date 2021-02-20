@@ -50,6 +50,18 @@ export class CanvasAdapter {
         });
         this.context.closePath();
     }
+    addCircle(point, radius) {
+        const { x, y } = this.intoCanvasSpace(point);
+        this.context.arc(x, y, radius, 0, 2 * Math.PI);
+    }
+    drawCircle(point, radius, fillStyle) {
+        const { x, y } = this.intoCanvasSpace(point);
+        const context = this.context;
+        context.beginPath();
+        context.fillStyle = fillStyle;
+        this.addCircle(point, radius);
+        context.fill();
+    }
     makeBitmapMatchElement() {
         const canvas = this.canvas;
         const style = canvas.style;
@@ -241,6 +253,9 @@ export class Vertex {
     get segments() {
         return [this.to, this.from];
     }
+    get interiorAngle() {
+        return LegalVertexGroup.makeKey(Math.PI - (this.to.angle - this.from.angle));
+    }
     getUnique(predicate) {
         let count = 0;
         let result;
@@ -294,106 +309,7 @@ export class VertexGroup {
     }
     addVertex(vertex) {
         this.vertices.push(vertex);
-        this.checkForForce();
-    }
-    checkForForce() {
-        if (this.dot) {
-            const kiteLong = [];
-            const kiteShort = [];
-            const dart = [];
-            this.vertices.forEach((vertex) => {
-                if (vertex.type == "dart") {
-                    dart.push(vertex);
-                }
-                else {
-                    if (vertex.to.short) {
-                        kiteShort.push(vertex);
-                    }
-                    else {
-                        kiteLong.push(vertex);
-                    }
-                }
-            });
-            if (kiteShort.length == 2) {
-                if (dart.length < 2) {
-                    const adjacent = kiteShort[0].isAdjacentTo(kiteShort[1]);
-                    if (!adjacent) {
-                        throw new Error("wtf");
-                    }
-                    const wantsDart = [adjacent.from.to, adjacent.to.from];
-                    wantsDart.forEach((segment) => (segment.forcedMove = "dart"));
-                    dart.forEach((dartVertex) => {
-                        const longSegment = dartVertex.from.long
-                            ? dartVertex.from
-                            : dartVertex.to;
-                        longSegment.forcedMove = "dart";
-                    });
-                }
-            }
-            else if (kiteLong.length >= 3) {
-                if (kiteLong.length < 5) {
-                    kiteLong.forEach((vertex) => {
-                        vertex.to.forcedMove = "kite";
-                        vertex.from.forcedMove = "kite";
-                    });
-                }
-            }
-            else if (kiteShort.length == 1) {
-                if (dart.length == 2 && kiteLong.length < 2) {
-                    const adjacent = dart.map((dartVertex) => dartVertex.isAdjacentTo(kiteShort[0]));
-                    const wantsTwoLongKites = adjacent.every((result) => result);
-                    if (wantsTwoLongKites) {
-                        dart.forEach((dartVertex) => {
-                            const longSegment = dartVertex.from.long
-                                ? dartVertex.from
-                                : dartVertex.to;
-                            longSegment.forcedMove = "kite";
-                        });
-                    }
-                }
-                else if (kiteLong.length > 0) {
-                    kiteShort[0].segments.forEach((segment) => {
-                        segment.forcedMove = "dart";
-                    });
-                    dart.forEach((dartVertex) => {
-                        dartVertex.segments.forEach((segment) => {
-                            segment.forcedMove = "kite";
-                        });
-                    });
-                    kiteLong.forEach((kiteVertex) => {
-                    });
-                }
-            }
-        }
-        else {
-            const kite = [];
-            const dartIn = [];
-            const dartOut = [];
-            this.vertices.forEach((vertex) => {
-                if (vertex.type == "dart") {
-                    if (vertex.to.long) {
-                        dartIn.push(vertex);
-                    }
-                    else {
-                        dartOut.push(vertex);
-                    }
-                }
-                else {
-                    kite.push(vertex);
-                }
-            });
-            if (dartOut.length == 1) {
-                if (kite.length == 1) {
-                    kite[0].long.forcedMove = "kite";
-                }
-            }
-            else if (dartIn.length == 4) {
-                this.vertices.forEach((vertex) => {
-                    vertex.to.forcedMove = "dart";
-                    vertex.from.forcedMove = "dart";
-                });
-            }
-        }
+        LegalVertexGroup.checkForForce(this.vertices);
     }
     get dot() {
         return this.vertices[0].dot;
@@ -403,6 +319,17 @@ export class VertexGroup {
     }
 }
 VertexGroup.all = new Map();
+function lvi_equal(a, b) {
+    if ((!a) && (!b)) {
+        return true;
+    }
+    else if ((!a) || (!b)) {
+        return false;
+    }
+    else {
+        return (a.interiorAngle == b.interiorAngle) && (a.type == b.type);
+    }
+}
 class LegalVertexGroup {
     constructor(dot, shapes, name) {
         this.dot = dot;
@@ -416,18 +343,38 @@ class LegalVertexGroup {
         }
         return degrees;
     }
+    static checkForForce(currentVertices) {
+        if (currentVertices.length <= 1) {
+            return;
+        }
+        const minAngle = Math.min(...currentVertices.map(vertex => vertex.from.angle));
+        const inDegrees = new Map();
+        currentVertices.forEach(vertex => inDegrees.set(LegalVertexGroup.makeKey(vertex.from.angle - minAngle), vertex));
+        const legalVertexGroups = LegalVertexGroup.find(currentVertices[0].dot);
+        const possibleGroups = legalVertexGroups.filter(group => group.contains(inDegrees));
+        if (possibleGroups.length == 0) {
+            throw new Error("We are already in an illegal position.");
+        }
+        const requirements = possibleGroups.reduce((g1, g2) => g1.intersection(g2));
+        const center = currentVertices[0].from.from;
+        const inputType = currentVertices[0].dot ? "dot" : "no dot";
+        const input = Array.from(inDegrees.entries()).map(entry => [entry[0], entry[1].type]);
+        console.log("checkForForce()", { center, inputType, input, requirements });
+    }
     intersection(that) {
         const shapes = new Map();
-        this.shapes.forEach((type, degrees) => {
-            if (that.shapes.get(degrees) === type) {
-                shapes.set(degrees, type);
+        this.shapes.forEach((vertexInfo, degrees) => {
+            if (lvi_equal(that.shapes.get(degrees), vertexInfo)) {
+                shapes.set(degrees, vertexInfo);
             }
         });
         return new LegalVertexGroup(this.dot, shapes, this.name + '∩' + that.name);
     }
-    contains(that) {
-        for (const entry of that.shapes) {
-            if (this.shapes.get(entry[0]) != entry[1]) {
+    contains(shapes) {
+        for (const entry of shapes) {
+            const fromThis = this.shapes.get(entry[0]);
+            const fromShapes = entry[1];
+            if (!lvi_equal(fromThis, fromShapes)) {
                 return false;
             }
         }
@@ -441,9 +388,9 @@ class LegalVertexGroup {
             }
             else {
                 const rotatedShapes = new Map();
-                this.shapes.forEach((type, originalDegrees) => {
+                this.shapes.forEach((vertexInfo, originalDegrees) => {
                     const newDegrees = (originalDegrees - degreesToRotate + 360) % 360;
-                    rotatedShapes.set(newDegrees, type);
+                    rotatedShapes.set(newDegrees, vertexInfo);
                 });
                 result.push(new LegalVertexGroup(this.dot, rotatedShapes, this.name));
             }
@@ -455,9 +402,12 @@ class LegalVertexGroup {
         let segment = firstSegment;
         const shapes = new Map();
         for (const type of moves) {
-            shapes.set(this.makeKey(segment.angle), type);
             const shape = Shape.create(segment, type);
-            segment = shape.segments.find(segment => segment.to == Point.ORIGIN).invert();
+            const fromSegment = segment;
+            const toSegment = shape.segments.find(segment => segment.to == Point.ORIGIN);
+            const vertex = new Vertex(toSegment, fromSegment, shape);
+            shapes.set(this.makeKey(segment.angle), vertex);
+            segment = toSegment.invert();
         }
         if (!segment.equals(firstSegment)) {
             throw new Error("wtf");
