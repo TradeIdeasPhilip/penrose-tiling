@@ -14,6 +14,7 @@ const addDartButton = getById("addDartButton", HTMLButtonElement);
 const doForcedMovesButton = getById("doForcedMovesButton", HTMLButtonElement);
 const selectPrevious = getById("selectPrevious", HTMLButtonElement);
 const selectNext = getById("selectNext", HTMLButtonElement);
+const autoCheckBox = getById("auto", HTMLInputElement);
 
 const canvasAdapter = new CanvasAdapter("canvas");
 canvasAdapter.makeBitmapMatchElement();
@@ -308,6 +309,83 @@ doForcedMovesButton.addEventListener("click", () => {
         throw new Error("wtf");
       }
       add(type, segment);
+    }
+  });
+});
+
+class Auto {
+  private static timerId: number | undefined;
+  static enabled() {
+    return this.timerId !== undefined;
+  }
+  static enable() {
+    if (this.enabled()) {
+      return;
+    }
+    this.scheduleSoon();
+  }
+  static disable() {
+    if (!this.enabled()) {
+      return;
+    }
+    clearTimeout(this.timerId);
+    this.timerId = undefined;
+  }
+  private static scheduleSoon() {
+    this.timerId = setTimeout(() => {
+      this.actNow();
+    }, 1000);
+  }
+  private static actNow() {
+    const inOrder = Array.from(available);
+    const forced = inOrder.filter((segment) => segment.forcedMove);
+    // If there are any forced moves, they get first priority.
+    const searchIn = forced.length > 0 ? forced : inOrder;
+    const closestSegment = searchIn.reduce((closestSoFar, segment) => {
+      /**
+       * How far is the midpoint of `segment` from the origin?
+       *
+       * We want to focus on the visible part of the screen.
+       * For simplicity we're just picking the segment closest to the origin.
+       */
+      const distance = Math.hypot(
+        (segment.to.x + segment.from.x) / 2,
+        (segment.to.y + segment.from.y) / 2
+      );
+      if (!closestSoFar || distance < closestSoFar.distance) {
+        // The current segment is the best we've seen so far.
+        return { distance, segment };
+      } else {
+        // The previous record holder remains.
+        return closestSoFar;
+      }
+    }, undefined as { distance: number; segment: Segment } | undefined);
+    const segment = closestSegment?.segment;
+    const type = (segment?.forcedMove)??(Math.random() < 0.5 ? "dart" : "kite");
+    add(type, segment);
+    this.scheduleSoon();
+  }
+}
+
+autoCheckBox.addEventListener("change", () => {
+  if (autoCheckBox.checked) {
+    Auto.enable();
+  } else {
+    Auto.disable();
+  }
+});
+
+[
+  addKiteButton,
+  addDartButton,
+  doForcedMovesButton,
+  selectPrevious,
+  selectNext,
+].forEach((button) => {
+  button.addEventListener("click", () => {
+    if (autoCheckBox.checked) {
+      autoCheckBox.checked = false;
+      Auto.disable();
     }
   });
 });

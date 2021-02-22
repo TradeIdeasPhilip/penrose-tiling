@@ -5,6 +5,7 @@ const addDartButton = getById("addDartButton", HTMLButtonElement);
 const doForcedMovesButton = getById("doForcedMovesButton", HTMLButtonElement);
 const selectPrevious = getById("selectPrevious", HTMLButtonElement);
 const selectNext = getById("selectNext", HTMLButtonElement);
+const autoCheckBox = getById("auto", HTMLInputElement);
 const canvasAdapter = new CanvasAdapter("canvas");
 canvasAdapter.makeBitmapMatchElement();
 const context = canvasAdapter.context;
@@ -221,6 +222,69 @@ doForcedMovesButton.addEventListener("click", () => {
                 throw new Error("wtf");
             }
             add(type, segment);
+        }
+    });
+});
+class Auto {
+    static enabled() {
+        return this.timerId !== undefined;
+    }
+    static enable() {
+        if (this.enabled()) {
+            return;
+        }
+        this.scheduleSoon();
+    }
+    static disable() {
+        if (!this.enabled()) {
+            return;
+        }
+        clearTimeout(this.timerId);
+        this.timerId = undefined;
+    }
+    static scheduleSoon() {
+        this.timerId = setTimeout(() => {
+            this.actNow();
+        }, 1000);
+    }
+    static actNow() {
+        const inOrder = Array.from(available);
+        const forced = inOrder.filter((segment) => segment.forcedMove);
+        const searchIn = forced.length > 0 ? forced : inOrder;
+        const closestSegment = searchIn.reduce((closestSoFar, segment) => {
+            const distance = Math.hypot((segment.to.x + segment.from.x) / 2, (segment.to.y + segment.from.y) / 2);
+            if (!closestSoFar || distance < closestSoFar.distance) {
+                return { distance, segment };
+            }
+            else {
+                return closestSoFar;
+            }
+        }, undefined);
+        const segment = closestSegment?.segment;
+        const type = (segment?.forcedMove) ?? (Math.random() < 0.5 ? "dart" : "kite");
+        add(type, segment);
+        this.scheduleSoon();
+    }
+}
+autoCheckBox.addEventListener("change", () => {
+    if (autoCheckBox.checked) {
+        Auto.enable();
+    }
+    else {
+        Auto.disable();
+    }
+});
+[
+    addKiteButton,
+    addDartButton,
+    doForcedMovesButton,
+    selectPrevious,
+    selectNext,
+].forEach((button) => {
+    button.addEventListener("click", () => {
+        if (autoCheckBox.checked) {
+            autoCheckBox.checked = false;
+            Auto.disable();
         }
     });
 });
