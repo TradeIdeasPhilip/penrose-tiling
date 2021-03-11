@@ -313,6 +313,9 @@ doForcedMovesButton.addEventListener("click", () => {
   });
 });
 
+/**
+ * All of the code needed to automatically add new pieces.
+ */
 class Auto {
   private static timerId: number | undefined;
   static enabled() {
